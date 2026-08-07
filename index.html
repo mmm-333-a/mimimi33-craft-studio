@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ビーズ設計スタジオ v10</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
+<title>ビーズ設計スタジオ v10.3</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:#191970; --accent:#b22222; --text:#222;
@@ -650,6 +650,274 @@ header p{font-size:calc(13px * var(--ui-scale))}
   --ui-scale:1;
 }
 
+
+/* =========================================================
+   v10.1 iPad / touch foundation
+   ========================================================= */
+:root{
+  --touch-hit:32px;
+}
+
+/* Keep visual bead size unchanged, but enlarge tap target using pseudo hit area */
+.design-item,
+.bead,
+.part-item{
+  touch-action:pan-y pinch-zoom;
+}
+.design-item::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:max(var(--touch-hit),100%);
+  height:max(var(--touch-hit),100%);
+  transform:translate(-50%,-50%);
+  background:transparent;
+  border-radius:50%;
+  pointer-events:auto;
+}
+.part-item::after{
+  border-radius:8px;
+}
+
+/* Touch drag feedback */
+.design-item.touch-dragging{
+  opacity:.45;
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+}
+.design-item.touch-drop-target{
+  outline:2px solid var(--sub);
+  outline-offset:3px;
+}
+
+/* Make controls comfortably tappable on touch devices without changing preview scale */
+@media (pointer:coarse){
+  .ui-scale-bar select,
+  .tab-btn,
+  #tab-design .panel-grid > .stack:first-child button,
+  #tab-patterns button,
+  #tab-calc button,
+  #tab-save button,
+  #tab-save .file-label,
+  #tab-design .panel-grid > .stack:first-child input,
+  #tab-design .panel-grid > .stack:first-child select,
+  #tab-patterns input,
+  #tab-patterns select,
+  #tab-calc input,
+  #tab-calc select{
+    min-height:36px;
+  }
+  input[type="color"]{
+    min-width:42px;
+    min-height:36px;
+  }
+}
+
+/* iPad landscape / medium tablet: preserve 2 columns but give preview more room */
+@media (min-width:768px) and (max-width:1180px) and (orientation:landscape){
+  .wrap{max-width:none;padding-left:12px;padding-right:12px}
+  .panel-grid{
+    grid-template-columns:minmax(280px,34%) minmax(0,1fr);
+    gap:12px;
+  }
+  #tab-design .panel-grid > .stack:first-child{
+    min-width:0;
+  }
+  #tab-design .panel-grid > .stack:nth-child(2){
+    min-width:0;
+  }
+  .preview{
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+}
+
+/* iPad portrait: one-column flow; completed design comes first for easier checking */
+@media (min-width:700px) and (max-width:1024px) and (orientation:portrait){
+  .wrap{max-width:none;padding:12px}
+  .panel-grid{grid-template-columns:1fr}
+  #tab-design .panel-grid{
+    display:flex;
+    flex-direction:column;
+  }
+  #tab-design .panel-grid > .stack:nth-child(2){
+    order:1;
+  }
+  #tab-design .panel-grid > .stack:first-child{
+    order:2;
+  }
+  .preview{
+    min-height:360px;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .u-stage{min-width:620px}
+}
+
+/* Narrow tablet / phone fallback */
+@media (max-width:699px){
+  .wrap{padding:10px}
+  .tabs{
+    position:sticky;
+    top:45px;
+    z-index:20;
+    background:var(--base);
+    padding-top:6px;
+  }
+  .tab-btn{flex:1 0 auto}
+  .panel-grid{grid-template-columns:1fr}
+  #tab-design .panel-grid{
+    display:flex;
+    flex-direction:column;
+  }
+  #tab-design .panel-grid > .stack:nth-child(2){order:1}
+  #tab-design .panel-grid > .stack:first-child{order:2}
+  .preview{
+    min-height:300px;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+}
+
+
+
+/* =========================================================
+   v10.3 Dynamic patterns + symmetry pattern assist
+   ========================================================= */
+.pattern-toolbar{
+  display:flex;gap:8px;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;margin-bottom:10px
+}
+.pattern-toolbar h2{margin:0}
+.pattern-toolbar .secondary{white-space:nowrap}
+.pattern-card .pattern-head{grid-template-columns:minmax(0,1fr) auto auto}
+.pattern-delete{
+  padding:6px 9px!important;
+  font-size:12px!important;
+}
+.sym-pattern-box{
+  margin-top:12px;padding:12px;background:#f8f8fb;
+  border:1px solid var(--line);border-radius:12px
+}
+.sym-pattern-grid{
+  display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:8px
+}
+.sym-pattern-grid label{margin-top:0}
+.sym-pattern-actions{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px
+}
+@media(max-width:560px){
+  .sym-pattern-grid,.sym-pattern-actions{grid-template-columns:1fr}
+}
+
+/* =========================================================
+   v10.2 Bead Library
+   ========================================================= */
+.library-grid{
+  display:grid;
+  grid-template-columns:320px minmax(0,1fr);
+  gap:16px;
+}
+.library-form,
+.library-list-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:18px;
+  box-shadow:0 4px 14px rgba(0,0,0,.04);
+}
+.library-items{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:10px;
+}
+.library-item{
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:12px;
+  padding:11px;
+  cursor:pointer;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:10px;
+  align-items:center;
+  transition:box-shadow .12s ease,transform .12s ease,border-color .12s ease;
+}
+.library-item:hover{
+  border-color:#aaaac5;
+  box-shadow:0 3px 10px rgba(0,0,0,.06);
+}
+.library-item:active{transform:scale(.99)}
+.library-item.selected{
+  outline:2px solid var(--sub);
+  outline-offset:1px;
+}
+.library-visual{
+  width:42px;
+  height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+.library-dot{
+  border:1px solid rgba(0,0,0,.25);
+  box-shadow:inset -2px -2px 4px rgba(0,0,0,.12), inset 2px 2px 4px rgba(255,255,255,.55);
+}
+.library-dot.round{border-radius:50%;width:24px;height:24px}
+.library-dot.oval{border-radius:50%;width:34px;height:18px}
+.library-glyph{font-size:27px;line-height:1;text-shadow:0 1px 1px rgba(0,0,0,.15)}
+.library-name{font-weight:700;color:var(--sub);font-size:14px;overflow-wrap:anywhere}
+.library-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.library-actions{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.library-actions button{
+  padding:6px 8px;
+  font-size:12px;
+}
+.library-empty{
+  padding:28px 12px;
+  color:var(--muted);
+  text-align:center;
+  border:1px dashed #c8c8d3;
+  border-radius:12px;
+}
+.library-toolbar{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.library-toolbar input[type="search"]{
+  flex:1 1 220px;
+  min-width:0;
+}
+.library-count{font-size:12px;color:var(--muted)}
+.library-preview-box{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px;
+  background:#f8f8fb;
+  border:1px solid var(--line);
+  border-radius:10px;
+  margin-top:10px;
+}
+.library-preview-box .library-visual{flex:0 0 48px}
+@media(max-width:900px){
+  .library-grid{grid-template-columns:1fr}
+}
+@media(pointer:coarse){
+  .library-item{min-height:68px}
+  .library-actions button{min-height:36px}
+}
+
 @media(max-width:960px){
   .panel-grid{grid-template-columns:1fr}
   .metrics{grid-template-columns:1fr 1fr}
@@ -685,7 +953,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v10</h1>
+      <h1>ビーズ設計スタジオ v10.3</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -712,6 +980,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
   <button class="tab-btn" data-tab="patterns">② パターン</button>
   <button class="tab-btn" data-tab="calc">③ 設計・計算</button>
   <button class="tab-btn" data-tab="save">④ 保存・レシピ</button>
+  <button class="tab-btn" data-tab="library">⑤ ビーズライブラリ</button>
 </div>
 
 <!-- DESIGN -->
@@ -837,6 +1106,26 @@ header p{font-size:calc(13px * var(--ui-scale))}
         <button id="symClear" class="danger">左半分を消去</button>
       </div>
       <div class="help">左半分のプレビューは「外側 → 中央」の順です。中央側に追加したビーズは、中央ブロックのすぐ隣に配置されます。</div>
+
+      <div class="sym-pattern-box">
+        <h3 style="margin-top:0">登録パターンを使う</h3>
+        <div class="help">②パターンタブで登録した並びを、そのまま左半分へ追加できます。完成時は右側へ鏡写しされます。</div>
+        <div class="sym-pattern-grid">
+          <div>
+            <label>使用パターン</label>
+            <select id="symPatternSelect"></select>
+          </div>
+          <div>
+            <label>繰り返し回数</label>
+            <input id="symPatternRepeat" type="number" min="1" max="100" value="1">
+          </div>
+        </div>
+        <div class="sym-pattern-actions">
+          <button id="symPatternOuter" class="secondary">パターンを外側に追加</button>
+          <button id="symPatternCenter" class="secondary">パターンを中央側に追加</button>
+        </div>
+        <div id="symPatternInfo" class="help"></div>
+      </div>
 
       <h3>中央ブロック</h3>
       <div class="sym-grid">
@@ -979,7 +1268,11 @@ header p{font-size:calc(13px * var(--ui-scale))}
     <div id="patternSelectedInfo" class="result-box"></div>
   </section>
   <section class="card">
-    <h2>パターン1～3</h2>
+    <div class="pattern-toolbar">
+      <h2>登録パターン</h2>
+      <button id="addPattern" class="secondary">＋ パターン追加</button>
+    </div>
+    <div class="help">必要な数だけパターンを追加できます。各パターンは左右対称アシストからも呼び出せます。</div>
     <div id="patternsHost"></div>
   </section>
 </div>
@@ -1071,12 +1364,68 @@ header p{font-size:calc(13px * var(--ui-scale))}
 </div>
 </section>
 
+
+<!-- LIBRARY -->
+<section id="tab-library" class="tab-panel">
+  <div class="library-grid">
+    <section class="library-form">
+      <h2>ビーズ登録</h2>
+      <div class="help">よく使うビーズを登録しておくと、一覧から1タップで現在のビーズ設定へ反映できます。</div>
+
+      <label>登録名</label>
+      <input id="libName" type="text" placeholder="例：パール白 3mm">
+
+      <label>サイズ</label>
+      <select id="libSize">
+        <option value="s">小</option>
+        <option value="m">中</option>
+        <option value="l">大</option>
+      </select>
+
+      <label>形状</label>
+      <select id="libShape">
+        <option value="round">丸</option>
+        <option value="oval">楕円</option>
+        <option value="star">星</option>
+        <option value="heart">ハート</option>
+        <option value="diamond">菱形</option>
+      </select>
+
+      <label>色</label>
+      <div class="row">
+        <input id="libColor" type="color" value="#FFFFFF">
+        <input id="libHex" type="text" value="#FFFFFF" maxlength="7">
+      </div>
+
+      <div id="libPreview" class="library-preview-box"></div>
+
+      <button id="libSave" class="primary">ライブラリへ登録</button>
+      <button id="libCancelEdit" class="soft" style="width:100%;margin-top:8px;display:none">編集をキャンセル</button>
+
+      <div class="help note-accent">
+        ライブラリはブラウザのローカル保存です。同じブラウザでは作品を変えても共通で使えます。
+      </div>
+    </section>
+
+    <section class="library-list-card">
+      <h2>登録済みビーズ</h2>
+      <div class="library-toolbar">
+        <input id="libSearch" type="search" placeholder="名前・色・形状で検索">
+        <span id="libCount" class="library-count">0件</span>
+      </div>
+      <div id="libraryItems" class="library-items"></div>
+    </section>
+  </div>
+</section>
+
 </div>
 
 <script>
 (() => {
   const beads=[];
   const symmetryLeft=[];
+  const beadLibrary=[];
+  let libraryEditIndex=null;
   const patterns=[
     {name:"パターン1",beads:[],repeat:4},
     {name:"パターン2",beads:[],repeat:4},
@@ -1126,11 +1475,17 @@ header p{font-size:calc(13px * var(--ui-scale))}
     historyLock=true;
     beads.length=0;(s.beads||[]).forEach(x=>beads.push({...x}));
     symmetryLeft.length=0;(s.symmetryLeft||[]).forEach(x=>symmetryLeft.push({...x}));
-    for(let i=0;i<3;i++){
-      patterns[i].name=s.patterns?.[i]?.name||`パターン${i+1}`;
-      patterns[i].repeat=s.patterns?.[i]?.repeat||4;
-      patterns[i].beads.length=0;(s.patterns?.[i]?.beads||[]).forEach(x=>patterns[i].beads.push({...x}));
-    }
+    patterns.length=0;
+    const restoredPatterns=Array.isArray(s.patterns)&&s.patterns.length?s.patterns:[
+      {name:"パターン1",repeat:4,beads:[]},
+      {name:"パターン2",repeat:4,beads:[]},
+      {name:"パターン3",repeat:4,beads:[]}
+    ];
+    restoredPatterns.forEach((p,i)=>patterns.push({
+      name:p?.name||`パターン${i+1}`,
+      repeat:Math.max(1,Math.min(100,Number(p?.repeat)||4)),
+      beads:cloneItems(p?.beads||[])
+    }));
     selectedItemIndex=null;
     historyLock=false;
     renderAll();
@@ -1161,7 +1516,181 @@ header p{font-size:calc(13px * var(--ui-scale))}
     document.querySelectorAll(".tab-panel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+btn.dataset.tab));
     if(btn.dataset.tab==="patterns")renderPatternSelectedInfo();
     if(btn.dataset.tab==="save")renderRecipeSummary();
+    if(btn.dataset.tab==="library"){syncLibraryFormFromCurrent();renderLibrary();}
   });
+
+
+  // bead library
+  const LIBRARY_KEY="beadsDesignStudio_beadLibrary_v1";
+  const shapeNameMap={round:"丸",oval:"楕円",star:"星",heart:"ハート",diamond:"菱形"};
+
+  function loadLibraryStorage(){
+    try{
+      const raw=localStorage.getItem(LIBRARY_KEY);
+      const arr=raw?JSON.parse(raw):[];
+      if(Array.isArray(arr)){
+        beadLibrary.length=0;
+        arr.forEach(x=>{
+          if(x && x.name && ["s","m","l"].includes(x.size) && shapeNameMap[x.shape||"round"] && /^#[0-9A-Fa-f]{6}$/.test(x.color||"")){
+            beadLibrary.push({
+              name:String(x.name),
+              size:x.size,
+              shape:x.shape||"round",
+              color:String(x.color).toUpperCase()
+            });
+          }
+        });
+      }
+    }catch(e){}
+  }
+  function saveLibraryStorage(){
+    try{localStorage.setItem(LIBRARY_KEY,JSON.stringify(beadLibrary));}catch(e){}
+  }
+  function lightOutlineNeeded(hex){
+    try{return isLightColor(hex)}catch(e){return false}
+  }
+  function libraryVisualHtml(item){
+    const shape=item.shape||"round",color=item.color||"#888888";
+    if(shape==="round"||shape==="oval"){
+      return `<div class="library-visual"><span class="library-dot ${shape}" style="background:${color}"></span></div>`;
+    }
+    const glyph=shape==="star"?"★":shape==="heart"?"♥":"◆";
+    const stroke=lightOutlineNeeded(color)?"-webkit-text-stroke:1px #777;":"";
+    return `<div class="library-visual"><span class="library-glyph" style="color:${color};${stroke}">${glyph}</span></div>`;
+  }
+  function currentMmForSize(size){
+    const mm=mmMap();
+    return fmt(mm[size]||0);
+  }
+  function syncLibraryFormFromCurrent(){
+    if(libraryEditIndex!==null)return;
+    if($("libSize"))$("libSize").value=selectedSize;
+    if($("libShape"))$("libShape").value=selectedShape;
+    if($("libColor"))$("libColor").value=$("color").value;
+    if($("libHex"))$("libHex").value=$("color").value.toUpperCase();
+    renderLibraryPreview();
+  }
+  function setLibraryColor(v){
+    if(!/^#[0-9A-Fa-f]{6}$/.test(v))return false;
+    $("libColor").value=v;
+    $("libHex").value=v.toUpperCase();
+    renderLibraryPreview();
+    return true;
+  }
+  function renderLibraryPreview(){
+    if(!$("libPreview"))return;
+    const item={
+      name:$("libName").value.trim()||"プレビュー",
+      size:$("libSize").value,
+      shape:$("libShape").value,
+      color:$("libColor").value.toUpperCase()
+    };
+    $("libPreview").innerHTML=libraryVisualHtml(item)+
+      `<div><div class="library-name">${escapeHtml(item.name)}</div>
+       <div class="library-meta">${sizeName[item.size]} / ${shapeNameMap[item.shape]} / ${item.color} / ${currentMmForSize(item.size)}mm</div></div>`;
+  }
+  function applyLibraryItem(index){
+    const item=beadLibrary[index];
+    if(!item)return;
+    selectedSize=item.size;
+    selectedShape=item.shape||"round";
+    syncSizeButtons();
+    syncShapeButtons();
+    setColor(item.color);
+    renderPatternSelectedInfo();
+  }
+  function startLibraryEdit(index){
+    const item=beadLibrary[index];
+    if(!item)return;
+    libraryEditIndex=index;
+    $("libName").value=item.name;
+    $("libSize").value=item.size;
+    $("libShape").value=item.shape||"round";
+    setLibraryColor(item.color);
+    $("libSave").textContent="登録内容を更新";
+    $("libCancelEdit").style.display="block";
+    renderLibraryPreview();
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+  function cancelLibraryEdit(){
+    libraryEditIndex=null;
+    $("libName").value="";
+    $("libSave").textContent="ライブラリへ登録";
+    $("libCancelEdit").style.display="none";
+    syncLibraryFormFromCurrent();
+  }
+  function deleteLibraryItem(index){
+    const item=beadLibrary[index];
+    if(!item)return;
+    if(!confirm(`「${item.name}」をライブラリから削除しますか？`))return;
+    beadLibrary.splice(index,1);
+    if(libraryEditIndex===index)cancelLibraryEdit();
+    else if(libraryEditIndex!==null && libraryEditIndex>index)libraryEditIndex--;
+    saveLibraryStorage();
+    renderLibrary();
+  }
+  function renderLibrary(){
+    if(!$("libraryItems"))return;
+    const host=$("libraryItems"),q=($("libSearch")?.value||"").trim().toLowerCase();
+    host.innerHTML="";
+    const filtered=beadLibrary.map((x,i)=>({x,i})).filter(({x})=>{
+      const hay=`${x.name} ${x.color} ${sizeName[x.size]} ${shapeNameMap[x.shape||"round"]}`.toLowerCase();
+      return !q || hay.includes(q);
+    });
+    $("libCount").textContent=`${filtered.length} / ${beadLibrary.length}件`;
+    if(!filtered.length){
+      host.innerHTML='<div class="library-empty">登録済みビーズがありません。<br>左のフォームから登録できます。</div>';
+      return;
+    }
+    filtered.forEach(({x,i})=>{
+      const card=document.createElement("div");
+      card.className="library-item";
+      card.innerHTML=libraryVisualHtml(x)+
+        `<div>
+          <div class="library-name">${escapeHtml(x.name)}</div>
+          <div class="library-meta">${sizeName[x.size]} / ${shapeNameMap[x.shape||"round"]} / ${x.color} / ${currentMmForSize(x.size)}mm</div>
+          <div class="library-actions">
+            <button class="secondary lib-use" type="button">使う</button>
+            <button class="soft lib-edit" type="button">編集</button>
+            <button class="danger lib-delete" type="button">削除</button>
+          </div>
+        </div>`;
+      card.querySelector(".lib-use").onclick=e=>{e.stopPropagation();applyLibraryItem(i)};
+      card.querySelector(".lib-edit").onclick=e=>{e.stopPropagation();startLibraryEdit(i)};
+      card.querySelector(".lib-delete").onclick=e=>{e.stopPropagation();deleteLibraryItem(i)};
+      card.onclick=()=>applyLibraryItem(i);
+      host.appendChild(card);
+    });
+  }
+
+  function setupLibraryEvents(){
+    if(!$("libSave"))return;
+    ["libName","libSize","libShape"].forEach(id=>$(id).addEventListener("input",renderLibraryPreview));
+    $("libColor").addEventListener("input",()=>{ $("libHex").value=$("libColor").value.toUpperCase(); renderLibraryPreview(); });
+    $("libHex").addEventListener("change",()=>{
+      const v=$("libHex").value.trim().toUpperCase();
+      if(!setLibraryColor(v)){
+        alert("カラーコードは #RRGGBB 形式で入力してください。");
+        $("libHex").value=$("libColor").value.toUpperCase();
+      }
+    });
+    $("libSearch").addEventListener("input",renderLibrary);
+    $("libCancelEdit").onclick=cancelLibraryEdit;
+    $("libSave").onclick=()=>{
+      const name=$("libName").value.trim();
+      const size=$("libSize").value,shape=$("libShape").value,color=$("libColor").value.toUpperCase();
+      if(!name){alert("登録名を入力してください。");return}
+      const item={name,size,shape,color};
+      if(libraryEditIndex===null){
+        beadLibrary.push(item);
+      }else{
+        beadLibrary[libraryEditIndex]=item;
+      }
+      saveLibraryStorage();
+      cancelLibraryEdit();
+      renderLibrary();
+    };
+  }
 
   // selectors
   function syncSizeButtons(){
@@ -1364,6 +1893,54 @@ header p{font-size:calc(13px * var(--ui-scale))}
       <span class="chip">約 ${fmt(len)}mm</span>`;
   }
 
+
+  function patternDisplayName(p,i){
+    const n=(p?.name||"").trim();
+    return n||`パターン${i+1}`;
+  }
+  function renderSymPatternOptions(){
+    const sel=$("symPatternSelect");
+    if(!sel)return;
+    const old=sel.value;
+    sel.innerHTML="";
+    patterns.forEach((p,i)=>{
+      const o=document.createElement("option");
+      o.value=String(i);
+      o.textContent=`${patternDisplayName(p,i)}（${p.beads.length}個）`;
+      sel.appendChild(o);
+    });
+    if(patterns.length){
+      const wanted=Number(old);
+      sel.value=Number.isInteger(wanted)&&patterns[wanted]?String(wanted):"0";
+    }
+    renderSymPatternInfo();
+  }
+  function renderSymPatternInfo(){
+    const info=$("symPatternInfo"),sel=$("symPatternSelect");
+    if(!info||!sel)return;
+    const idx=Number(sel.value),p=patterns[idx];
+    if(!p){info.textContent="登録パターンがありません。";return}
+    const rep=Math.max(1,Math.min(100,Number($("symPatternRepeat")?.value)||1));
+    info.textContent=p.beads.length
+      ? `${patternDisplayName(p,idx)}：${p.beads.length}個 × ${rep}回 ＝ ${p.beads.length*rep}個を片側へ追加`
+      : `${patternDisplayName(p,idx)} は未登録です。`;
+  }
+  function addPatternToSymmetry(where){
+    const idx=Number($("symPatternSelect")?.value),p=patterns[idx];
+    if(!p||!p.beads.length){alert("ビーズが登録されているパターンを選択してください。");return}
+    const rep=Math.max(1,Math.min(100,Number($("symPatternRepeat")?.value)||1));
+    const seq=[];
+    for(let k=0;k<rep;k++)p.beads.forEach(b=>seq.push({...b}));
+    pushHistory();
+    if(where==="outer") symmetryLeft.unshift(...seq);
+    else symmetryLeft.push(...seq);
+    renderSymmetry();
+  }
+  $("symPatternSelect").addEventListener("change",renderSymPatternInfo);
+  $("symPatternRepeat").addEventListener("input",renderSymPatternInfo);
+  $("symPatternOuter").onclick=()=>addPatternToSymmetry("outer");
+  $("symPatternCenter").onclick=()=>addPatternToSymmetry("center");
+
   // patterns
   function renderPatternSelectedInfo(){
     const n=Math.max(1,Number($("qty").value)||1);
@@ -1374,6 +1951,13 @@ header p{font-size:calc(13px * var(--ui-scale))}
     const shapeName={round:"丸",oval:"楕円",star:"星",heart:"ハート",diamond:"菱形"}[selectedShape];
     $("patternSelectedInfo").innerHTML=`現在選択：<strong>${sizeName[selectedSize]}</strong> ／ ${shapeName} ／ ${$("color").value.toUpperCase()} ／ 個数 ${n}`;
   }
+  function nextPatternName(){
+    let n=1;
+    const used=new Set(patterns.map((p,i)=>patternDisplayName(p,i)));
+    while(used.has(`パターン${n}`))n++;
+    return `パターン${n}`;
+  }
+
   function renderPatterns(){
     const host=$("patternsHost");host.innerHTML="";
     patterns.forEach((p,pi)=>{
@@ -1382,25 +1966,32 @@ header p{font-size:calc(13px * var(--ui-scale))}
         <div class="pattern-head">
           <input class="pname" data-p="${pi}" type="text" value="${escapeHtml(p.name)}">
           <span class="help" style="margin:0">${p.beads.length}個</span>
+          <button class="danger pattern-delete" data-p="${pi}" title="このパターンを削除">削除</button>
         </div>
         <div class="pattern-preview" id="patternPreview${pi}"></div>
         <div class="pattern-actions">
           <input id="repeat${pi}" class="prepeat" data-p="${pi}" type="number" min="1" max="100" value="${p.repeat}">
           <button class="secondary padd" data-p="${pi}">選択ビーズ追加</button>
           <button class="soft papply" data-p="${pi}">回数分追加</button>
-          <button class="danger pclear" data-p="${pi}">消去</button>
+          <button class="danger pclear" data-p="${pi}">中身を消去</button>
         </div>`;
       host.appendChild(box);
       const prev=$(`patternPreview${pi}`);
       if(!p.beads.length)prev.innerHTML='<div class="empty">未登録</div>';
       else p.beads.forEach((b,i)=>{
         const el=makeBead(b,i,"line");el.title="クリックで削除";
-        el.onclick=()=>{p.beads.splice(i,1);renderPatterns()};prev.appendChild(el);
+        el.onclick=()=>{pushHistory();p.beads.splice(i,1);renderPatterns();renderRecipeSummary()};prev.appendChild(el);
       });
     });
-    document.querySelectorAll(".pname").forEach(el=>el.oninput=()=>{patterns[Number(el.dataset.p)].name=el.value;renderRecipeSummary()});
+
+    document.querySelectorAll(".pname").forEach(el=>el.oninput=()=>{
+      patterns[Number(el.dataset.p)].name=el.value;
+      renderSymPatternOptions();
+      renderRecipeSummary();
+    });
     document.querySelectorAll(".prepeat").forEach(el=>el.oninput=()=>{
-      patterns[Number(el.dataset.p)].repeat=Math.max(1,Math.min(100,Number(el.value)||1));renderRecipeSummary()
+      patterns[Number(el.dataset.p)].repeat=Math.max(1,Math.min(100,Number(el.value)||1));
+      renderRecipeSummary();
     });
     document.querySelectorAll(".padd").forEach(el=>el.onclick=()=>{
       pushHistory();
@@ -1416,10 +2007,30 @@ header p{font-size:calc(13px * var(--ui-scale))}
       renderAll();
     });
     document.querySelectorAll(".pclear").forEach(el=>el.onclick=()=>{
+      const p=patterns[Number(el.dataset.p)];
+      if(!p.beads.length)return;
+      if(!confirm(`「${patternDisplayName(p,Number(el.dataset.p))}」の中身を消去しますか？`))return;
       pushHistory();
-      patterns[Number(el.dataset.p)].beads.length=0;renderPatterns();renderRecipeSummary();
+      p.beads.length=0;renderPatterns();renderRecipeSummary();
     });
+    document.querySelectorAll(".pattern-delete").forEach(el=>el.onclick=()=>{
+      const i=Number(el.dataset.p),p=patterns[i];
+      if(patterns.length<=1){alert("パターンは最低1つ残してください。");return}
+      if(!confirm(`「${patternDisplayName(p,i)}」を削除しますか？`))return;
+      pushHistory();
+      patterns.splice(i,1);
+      renderPatterns();renderRecipeSummary();
+    });
+    renderSymPatternOptions();
   }
+
+  $("addPattern").onclick=()=>{
+    pushHistory();
+    patterns.push({name:nextPatternName(),beads:[],repeat:4});
+    renderPatterns();renderRecipeSummary();
+    const cards=document.querySelectorAll("#patternsHost .pattern-card");
+    cards[cards.length-1]?.scrollIntoView({behavior:"smooth",block:"nearest"});
+  };
 
   // auto generation
 
@@ -1643,19 +2254,114 @@ header p{font-size:calc(13px * var(--ui-scale))}
     return el;
   }
 
+
+  /* v10.1 touch sorting for iPad / coarse pointers */
+  let touchDragIndex=null;
+  let touchDragEl=null;
+  let touchDragStarted=false;
+  let touchStartX=0,touchStartY=0;
+  let touchLongPressTimer=null;
+
+  function isCoarsePointer(){
+    return window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  }
+
+  function clearTouchDragVisuals(){
+    document.querySelectorAll(".design-item").forEach(el=>{
+      el.classList.remove("touch-dragging","touch-drop-target");
+    });
+    if(touchLongPressTimer){
+      clearTimeout(touchLongPressTimer);
+      touchLongPressTimer=null;
+    }
+    touchDragIndex=null;
+    touchDragEl=null;
+    touchDragStarted=false;
+  }
+
+  function bindTouchReorder(el,index){
+    if(!isCoarsePointer()) return;
+
+    el.addEventListener("pointerdown",ev=>{
+      if(ev.pointerType==="mouse") return;
+      touchStartX=ev.clientX;
+      touchStartY=ev.clientY;
+      touchDragIndex=index;
+      touchDragEl=el;
+      touchDragStarted=false;
+
+      // Long press starts reorder; short tap remains normal selection.
+      touchLongPressTimer=setTimeout(()=>{
+        touchDragStarted=true;
+        try{el.setPointerCapture(ev.pointerId)}catch(e){}
+        el.classList.add("touch-dragging");
+        if(navigator.vibrate) navigator.vibrate(15);
+      },280);
+    });
+
+    el.addEventListener("pointermove",ev=>{
+      if(ev.pointerType==="mouse") return;
+      const dx=Math.abs(ev.clientX-touchStartX);
+      const dy=Math.abs(ev.clientY-touchStartY);
+
+      // Finger moved before long-press => treat as scroll, cancel reorder.
+      if(!touchDragStarted && (dx>10 || dy>10)){
+        if(touchLongPressTimer){clearTimeout(touchLongPressTimer);touchLongPressTimer=null}
+        return;
+      }
+      if(!touchDragStarted) return;
+
+      ev.preventDefault();
+      const under=document.elementFromPoint(ev.clientX,ev.clientY);
+      const target=under?.closest?.(".design-item");
+      document.querySelectorAll(".design-item").forEach(x=>x.classList.remove("touch-drop-target"));
+      if(target && target!==touchDragEl) target.classList.add("touch-drop-target");
+    },{passive:false});
+
+    el.addEventListener("pointerup",ev=>{
+      if(ev.pointerType==="mouse") return;
+      if(touchLongPressTimer){clearTimeout(touchLongPressTimer);touchLongPressTimer=null}
+
+      if(!touchDragStarted){
+        touchDragIndex=null;
+        touchDragEl=null;
+        return; // normal click handler handles selection
+      }
+
+      ev.preventDefault();
+      const under=document.elementFromPoint(ev.clientX,ev.clientY);
+      const target=under?.closest?.(".design-item");
+      let targetIndex=target?Number(target.dataset.designIndex):-1;
+
+      if(Number.isInteger(targetIndex) && targetIndex>=0 && touchDragIndex!==null && targetIndex!==touchDragIndex){
+        pushHistory();
+        const moved=beads.splice(touchDragIndex,1)[0];
+        beads.splice(targetIndex,0,moved);
+        selectedItemIndex=targetIndex;
+      }
+      clearTouchDragVisuals();
+      renderAll();
+    },{passive:false});
+
+    el.addEventListener("pointercancel",clearTouchDragVisuals);
+  }
+
   function renderLine(){
     const s=$("strand");s.className="strand";s.innerHTML="";
     normalizeSelection();
     if(!beads.length){s.innerHTML='<div class="empty">左の設定からビーズ／金具を追加してください。</div>';return}
     beads.forEach((item,index)=>{
       const el=item.type==="part"?makePart(item,index,"line"):makeBead(item,index,"line");
+      el.dataset.designIndex=String(index);
       if(index===selectedItemIndex)el.classList.add("selected");
-      el.draggable=true;
-      el.ondragstart=()=>{dragIndex=index;el.classList.add("dragging")};
+      bindTouchReorder(el,index);
+      el.draggable=!isCoarsePointer();
+      el.ondragstart=()=>{if(isCoarsePointer())return false;dragIndex=index;el.classList.add("dragging")};
       el.ondragend=()=>{el.classList.remove("dragging");document.querySelectorAll(".design-item").forEach(x=>x.classList.remove("dragover"))};
-      el.ondragover=e=>{e.preventDefault();el.classList.add("dragover")};
+      el.ondragover=e=>{if(isCoarsePointer())return;e.preventDefault();el.classList.add("dragover")};
       el.ondragleave=()=>el.classList.remove("dragover");
       el.ondrop=e=>{
+        if(isCoarsePointer())return;
         e.preventDefault();
         if(dragIndex===null||dragIndex===index)return;
         pushHistory();
@@ -1723,6 +2429,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
     beads.forEach((item,index)=>{
       const d=itemLength(item),ratio=Math.min(1,start+(acc+d/2)/t),p=pointAtRatio(pts,cum,total,ratio);
       const el=item.type==="part"?makePart(item,index,"u"):makeBead(item,index,"u");
+      el.dataset.designIndex=String(index);
       el.style.left=p[0]+"px";el.style.top=p[1]+"px";
       if(index===selectedItemIndex)el.classList.add("selected");
       el.onclick=()=>{
@@ -1737,8 +2444,16 @@ header p{font-size:calc(13px * var(--ui-scale))}
     stage.appendChild(canvas);stage.appendChild(cap);s.appendChild(stage);
   }
 
+
+  function touchHintText(){
+    if(!isCoarsePointer()) return "";
+    return " iPad/タッチ端末：タップで選択、長押ししてから指を動かすと直線表示で並び替えできます。";
+  }
+
   function renderDesign(){
-    $("hintText").textContent=viewMode==="line"?"直線表示ではドラッグで並び替え、クリックで挿入位置を選択できます。削除は「選択した1個を削除」を使います。":"U字全体を目標長さとして、累積mm位置に配置しています。";
+    $("hintText").textContent=(viewMode==="line"
+      ?"直線表示ではドラッグで並び替え、クリックで挿入位置を選択できます。削除は「選択した1個を削除」を使います。"
+      :"U字全体を目標長さとして、累積mm位置に配置しています。") + touchHintText();
     viewMode==="line"?renderLine():renderU();
     const beadCount=beads.filter(x=>x.type!=="part").length;
     const partCount=beads.filter(x=>x.type==="part").length;
@@ -1789,7 +2504,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:10,
+      app:"beads-design-studio",version:10.3,
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
@@ -1833,11 +2548,17 @@ header p{font-size:calc(13px * var(--ui-scale))}
     $("symCenterCount").value=String(d.symmetry?.centerCount??1);
     $("symCenterSize").value=d.symmetry?.centerSize||"l";
     $("symCenterColor").value=d.symmetry?.centerColor||"#C8A96B";
-    for(let i=0;i<3;i++){
-      patterns[i].name=d.patterns?.[i]?.name||`パターン${i+1}`;
-      patterns[i].repeat=Math.max(1,Math.min(100,Number(d.patterns?.[i]?.repeat)||4));
-      patterns[i].beads.length=0;(d.patterns?.[i]?.beads||[]).forEach(b=>patterns[i].beads.push(b));
-    }
+    patterns.length=0;
+    const loadedPatterns=Array.isArray(d.patterns)&&d.patterns.length?d.patterns:[
+      {name:"パターン1",repeat:4,beads:[]},
+      {name:"パターン2",repeat:4,beads:[]},
+      {name:"パターン3",repeat:4,beads:[]}
+    ];
+    loadedPatterns.forEach((p,i)=>patterns.push({
+      name:p?.name||`パターン${i+1}`,
+      repeat:Math.max(1,Math.min(100,Number(p?.repeat)||4)),
+      beads:(p?.beads||[]).map(b=>({...b}))
+    }));
     const v=d.view||{};
     viewMode=v.mode==="u"?"u":"line";uAnchor=v.uAnchor==="start"?"start":"center";uScale=["small","mid","big"].includes(v.uScale)?v.uScale:"small";
     $("showNumbers").checked=!!v.showNumbers;$("showThread").checked=v.showThread!==false;$("showGlassesEnds").checked=!!v.showGlassesEnds;$("showClasp").checked=!!v.showClasp;$("showRings").checked=!!v.showRings;
@@ -1873,7 +2594,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
     ctx.fillStyle="#191970";ctx.font='bold 34px "Meiryo UI", Meiryo, sans-serif';ctx.fillText($("projectName").value||"ビーズデザイン",60,62);
     ctx.fillStyle="#444";ctx.font='20px "Meiryo UI", Meiryo, sans-serif';ctx.fillText(`${$("projectType").value}　目標 ${fmt(targetMm())}mm　現在 ${fmt(currentMm())}mm`,60,98);
     if(viewMode==="u")drawUToCanvas(ctx,80,140,1040,680);else drawLineToCanvas(ctx,70,180,1060,560);
-    ctx.fillStyle="#666";ctx.font='16px "Meiryo UI", Meiryo, sans-serif';ctx.fillText("Generated by ビーズ設計スタジオ v10",60,860);
+    ctx.fillStyle="#666";ctx.font='16px "Meiryo UI", Meiryo, sans-serif';ctx.fillText("Generated by ビーズ設計スタジオ v10.3",60,860);
     canvas.toBlob(blob=>downloadBlob(blob,`${safeName($("projectName").value)}.png`),"image/png");
   }
   function drawBeadShape(ctx,x,y,r,item){
@@ -1955,8 +2676,13 @@ header p{font-size:calc(13px * var(--ui-scale))}
   function renderAll(){
     renderDesign();renderMetrics();renderSummary();renderPatterns();renderPatternSelectedInfo();
     renderSingleSize();renderReverse();renderSymmetry();renderRecipeSummary();renderUsedColors();
+    if(document.getElementById("tab-library")?.classList.contains("active")){renderLibraryPreview();renderLibrary();}
   }
 
+  loadLibraryStorage();
+  setupLibraryEvents();
+  syncLibraryFormFromCurrent();
+  renderLibrary();
   renderAll();
 })();
 </script>
