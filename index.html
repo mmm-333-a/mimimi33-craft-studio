@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v11.7</title>
+<title>ビーズ設計スタジオ v11.8</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1308,6 +1308,81 @@ html[data-theme="watercolor"] header .project-inline select{
   border-color:rgba(123,41,72,.28);
 }
 
+
+/* =========================================================
+   v11.8 Pattern consistency + bead transparency
+   ========================================================= */
+.opacity-row{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+.opacity-btn{
+  border:1px solid #bfc1d1;
+  background:#fff;
+  padding:9px 8px;
+  color:var(--sub);
+  font-weight:700;
+}
+.opacity-btn.active{
+  background:var(--sub);
+  color:#fff;
+  border-color:var(--sub);
+}
+
+.bead.opacity-semi{
+  border-color:rgba(60,90,110,.42);
+  box-shadow:
+    inset -2px -2px 4px rgba(0,0,0,.08),
+    inset 2px 2px 5px rgba(255,255,255,.82),
+    0 1px 2px rgba(0,0,0,.08);
+}
+.bead.opacity-clear{
+  border:1.5px solid rgba(64,112,142,.58);
+  background-image:
+    linear-gradient(135deg,
+      rgba(255,255,255,.86) 0 27%,
+      rgba(156,205,226,.16) 28% 56%,
+      rgba(255,255,255,.48) 57% 100%);
+  box-shadow:
+    inset 2px 2px 5px rgba(255,255,255,.92),
+    inset -2px -2px 4px rgba(86,137,163,.15),
+    0 1px 3px rgba(0,0,0,.10);
+}
+.bead.opacity-clear::after,
+.bead.opacity-semi::after{
+  content:"";
+  position:absolute;
+  left:20%;
+  top:15%;
+  width:26%;
+  height:20%;
+  border-radius:50%;
+  background:rgba(255,255,255,.78);
+  pointer-events:none;
+}
+
+#patternViewSuggest .template-sequence{
+  margin-top:8px;
+  font-size:12px;
+  line-height:1.45;
+  color:#444;
+  font-weight:700;
+}
+#patternViewSuggest .template-meta .actual-kinds{
+  display:inline-block;
+  margin-left:6px;
+  font-weight:700;
+  color:var(--sub);
+}
+
+#patternViewSuggest .suggest-material-controls{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+#patternViewSuggest .suggest-material-controls select[data-sf="opacity"]{
+  grid-column:span 2;
+}
+
 </style>
 </head>
 <body>
@@ -1340,7 +1415,7 @@ html[data-theme="watercolor"] header .project-inline select{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v11.7</h1>
+      <h1>ビーズ設計スタジオ v11.8</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -1409,6 +1484,14 @@ html[data-theme="watercolor"] header .project-inline select{
         <button data-color="#555555" style="background:#555"></button>
         <button data-color="#111111" style="background:#111"></button>
       </div>
+
+      <label>透明度</label>
+      <div class="opacity-row">
+        <button class="opacity-btn active" data-opacity="opaque">不透明</button>
+        <button class="opacity-btn" data-opacity="semi">半透明</button>
+        <button class="opacity-btn" data-opacity="clear">透明</button>
+      </div>
+      <div class="help" style="margin-top:6px">白と透明は別扱いです。透明は背景が透ける表現で表示します。</div>
 
       <label>個数</label>
       <input id="qty" type="number" min="1" max="500" value="1">
@@ -1869,7 +1952,7 @@ html[data-theme="watercolor"] header .project-inline select{
     {name:"パターン2",beads:[],repeat:4},
     {name:"パターン3",beads:[],repeat:4}
   ];
-  let selectedSize="s",selectedShape="round",viewMode="line",dragIndex=null,uAnchor="center",uScale="small";
+  let selectedSize="s",selectedShape="round",selectedOpacity="opaque",viewMode="line",dragIndex=null,uAnchor="center",uScale="small";
   let selectedPart="balltip",selectedMetal="#B08A35",selectedItemIndex=null;
   const historyUndo=[],historyRedo=[];
   let historyLock=false;
@@ -1899,7 +1982,7 @@ html[data-theme="watercolor"] header .project-inline select{
   function currentMm(){return beads.reduce((a,b)=>a+itemLength(b),0)}
   function beadOnlyMm(){return beads.filter(x=>x.type!=="part").reduce((a,b)=>a+itemLength(b),0)}
   function fmt(n){return Number.isInteger(n)?String(n):n.toFixed(1).replace(/\.0$/,"")}
-  function selectedBead(){return {size:selectedSize,shape:selectedShape,color:$("color").value.toUpperCase()}}
+  function selectedBead(){return {size:selectedSize,shape:selectedShape,color:$("color").value.toUpperCase(),opacity:selectedOpacity}}
   function safeName(s){return (s||"beads_design").replace(/[\\/:*?"<>|]/g,"_").trim()||"beads_design"}
   function cloneItems(arr){return arr.map(x=>({...x}))}
   function snapshotState(){
@@ -2265,6 +2348,15 @@ html[data-theme="watercolor"] header .project-inline select{
     if($("patternQty"))$("patternQty").value=n;
     renderPatternSelectedInfo();
   }
+  
+  document.querySelectorAll(".opacity-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      selectedOpacity=btn.dataset.opacity||"opaque";
+      syncOpacityButtons();
+      renderPatternSelectedInfo();
+    });
+  });
+
   $("qty").addEventListener("input",()=>syncQty($("qty").value));
   $("patternQty").addEventListener("input",()=>syncQty($("patternQty").value));
   $("undo").onclick=()=>{if(beads.length){pushHistory();beads.pop();renderAll()}};
@@ -2401,7 +2493,7 @@ html[data-theme="watercolor"] header .project-inline select{
     if($("patternHex"))$("patternHex").value=$("color").value.toUpperCase();
     syncSizeButtons();syncShapeButtons();
     const shapeName={round:"丸",oval:"楕円",star:"星",heart:"ハート",diamond:"菱形"}[selectedShape];
-    $("patternSelectedInfo").innerHTML=`現在選択：<strong>${sizeName[selectedSize]}</strong> ／ ${shapeName} ／ ${$("color").value.toUpperCase()} ／ 個数 ${n}`;
+    $("patternSelectedInfo").innerHTML=`現在選択：<strong>${sizeName[selectedSize]}</strong> ／ ${shapeName} ／ ${$("color").value.toUpperCase()} ／ ${opacityLabel(selectedOpacity)} ／ 個数 ${n}`;
   }
   function nextPatternName(){
     let n=1;
@@ -2507,16 +2599,16 @@ html[data-theme="watercolor"] header .project-inline select{
   ];
   let suggestionVisibleCount=8;
   const suggestionMaterials={
-    A:{size:"s",shape:"round",color:"#32AECD",usage:"high"},
-    B:{size:"s",shape:"round",color:"#FFFFFF",usage:"medium"},
-    C:{size:"m",shape:"round",color:"#C8A96B",usage:"low"},
-    D:{size:"m",shape:"round",color:"#8F78B5",usage:"low"}
+    A:{size:"s",shape:"round",color:"#32AECD",usage:"high",opacity:"opaque"},
+    B:{size:"s",shape:"round",color:"#FFFFFF",usage:"medium",opacity:"opaque"},
+    C:{size:"m",shape:"round",color:"#C8A96B",usage:"low",opacity:"opaque"},
+    D:{size:"m",shape:"round",color:"#8F78B5",usage:"low",opacity:"opaque"}
   };
   let accentEnabled=false;
   const accentMaterial={size:"l",shape:"round",color:"#F5E6CC",count:5,placement:"even"};
 
   function suggestionTypeName(t){return t==="mirror"?"左右対称":t==="accent"?"アクセント":"繰り返し"}
-  function cloneSuggestionMaterial(k){const m=suggestionMaterials[k];return {size:m.size,shape:m.shape,color:m.color.toUpperCase(),source:k}}
+  function cloneSuggestionMaterial(k){const m=suggestionMaterials[k];return {size:m.size,shape:m.shape,color:m.color.toUpperCase(),opacity:m.opacity||"opaque",source:k}}
   function suggestionShapeName(s){return s==="round"?"丸":s==="oval"?"楕円":s==="star"?"星":s==="heart"?"ハート":"菱形"}
   function renderSuggestionMaterials(){
     const host=$("suggestMaterials"); if(!host)return;
@@ -2531,6 +2623,11 @@ html[data-theme="watercolor"] header .project-inline select{
         <select data-sk="${key}" data-sf="shape"><option value="round"${m.shape==="round"?" selected":""}>丸</option><option value="oval"${m.shape==="oval"?" selected":""}>楕円</option><option value="star"${m.shape==="star"?" selected":""}>星</option><option value="heart"${m.shape==="heart"?" selected":""}>ハート</option><option value="diamond"${m.shape==="diamond"?" selected":""}>菱形</option></select>
         <input type="color" value="${m.color}" data-sk="${key}" data-sf="color">
         <input type="text" value="${m.color.toUpperCase()}" maxlength="7" data-sk="${key}" data-sf="hex">
+        <select data-sk="${key}" data-sf="opacity">
+          <option value="opaque"${(m.opacity||"opaque")==="opaque"?" selected":""}>不透明</option>
+          <option value="semi"${m.opacity==="semi"?" selected":""}>半透明</option>
+          <option value="clear"${m.opacity==="clear"?" selected":""}>透明</option>
+        </select>
       </div>
       <div class="usage-row">
         <select data-sk="${key}" data-sf="usage">
@@ -2544,7 +2641,7 @@ html[data-theme="watercolor"] header .project-inline select{
     });
     host.querySelectorAll("[data-sk]").forEach(el=>{
       const key=el.dataset.sk, field=el.dataset.sf;
-      el.addEventListener(field==="size"||field==="shape"||field==="usage"?"change":"input",()=>{
+      el.addEventListener(field==="size"||field==="shape"||field==="usage"||field==="opacity"?"change":"input",()=>{
         if(field==="hex"){
           if(!/^#[0-9A-Fa-f]{6}$/.test(el.value.trim()))return;
           suggestionMaterials[key].color=el.value.trim().toUpperCase();
@@ -2565,7 +2662,7 @@ html[data-theme="watercolor"] header .project-inline select{
     const m=suggestionMaterials[key], bead=makeBead(m,0,"line");
     bead.classList.remove("design-item");bead.style.pointerEvents="none";bead.style.transform="scale(.65)";
     host.appendChild(bead);
-    const t=document.createElement("span");t.textContent=`${sizeName[m.size]}・${suggestionShapeName(m.shape)}・${m.color.toUpperCase()} / ${usageLabel(m.usage)}`;host.appendChild(t);
+    const t=document.createElement("span");t.textContent=`${sizeName[m.size]}・${suggestionShapeName(m.shape)}・${m.color.toUpperCase()}・${opacityLabel(m.opacity||"opaque")} / ${usageLabel(m.usage)}`;host.appendChild(t);
   }
 
   function usageWeight(v){return v==="high"?6:v==="medium"?3:1}
@@ -2599,15 +2696,15 @@ html[data-theme="watercolor"] header .project-inline select{
     if(["A","B","C","D"].includes(it?.source))return it.source;
     return activeSuggestionKeys().find(k=>{
       const m=suggestionMaterials[k];
-      return it.size===m.size&&(it.shape||"round")===m.shape&&String(it.color).toUpperCase()===m.color.toUpperCase();
+      return it.size===m.size&&(it.shape||"round")===m.shape&&String(it.color).toUpperCase()===m.color.toUpperCase()&&(it.opacity||"opaque")===(m.opacity||"opaque");
     })||null;
   }
   function usageSummaryText(items){
     const counts={A:0,B:0,C:0,D:0,ACC:0};
     items.forEach(it=>{const k=matchSuggestionKey(it);if(k)counts[k]++});
-    const parts=activeSuggestionKeys().map(k=>`${k}:${counts[k]}個`);
-    if(accentEnabled)parts.push(`アクセント:${counts.ACC}個`);
-    return parts.join(" / ");
+    const parts=activeSuggestionKeys().filter(k=>counts[k]>0).map(k=>`${k}:${counts[k]}個`);
+    if(accentEnabled&&counts.ACC>0)parts.push(`アクセント:${counts.ACC}個`);
+    return parts.length?parts.join(" / "):"使用なし";
   }
   function renderAccentSummary(){
     const box=$("accentSummary");if(!box)return;
@@ -2615,57 +2712,31 @@ html[data-theme="watercolor"] header .project-inline select{
     box.textContent=`${sizeName[accentMaterial.size]}・${suggestionShapeName(accentMaterial.shape)}・${accentMaterial.color.toUpperCase()} / ${accentMaterial.count}個 / ${place}`;
   }
   function templatePreviewSequence(t){
-    const active=activeSuggestionKeys();
     const maxPreview=22;
-
-    // このテンプレートで実際に参照している色だけを対象にする。
-    // 例：2色案なら、A/Bだけ。C/Dが設定済みでもプレビューには混ぜない。
-    const rawKeys=[
-      ...(t.seq||[]),
-      ...(t.half||[]),
-      ...(t.center||[])
-    ];
-    const usedKeys=[...new Set(rawKeys.filter(k=>active.includes(k)))];
-
-    function ensureUsedKeys(seq){
-      const out=[...seq];
-      const present=new Set(out);
-      usedKeys.forEach(k=>{
-        if(!present.has(k)) out.push(k);
-      });
-      return out;
+    const unit=exactTemplateKeys(t);
+    if(!unit.length)return [];
+    const out=[];
+    while(out.length<maxPreview){
+      for(const k of unit){
+        if(out.length>=maxPreview)break;
+        out.push(k);
+      }
+      if(t.type==="mirror")break;
     }
-
-    if(t.type==="mirror"){
-      const weighted=buildWeightedKeys(t.half||[]);
-      const half=[];
-      while(half.length<9 && weighted.length) half.push(...weighted);
-
-      let left=ensureUsedKeys(half.slice(0,9)).slice(0,10);
-      const center=(t.center||[]).filter(k=>usedKeys.includes(k));
-
-      let seq=[...left,...center,...left.slice().reverse()];
-      seq=ensureUsedKeys(seq);
-      return seq.slice(0,maxPreview);
-    }
-
-    const weighted=buildWeightedKeys(t.seq||[]);
-    let out=[];
-    while(out.length<maxPreview && weighted.length) out.push(...weighted);
-
-    out=ensureUsedKeys(out.slice(0,maxPreview));
-
-    // プレビューは「実際に使う色」を見せるためのもの。
-    // 予想使用数0の未使用色は追加しない。
-    return out.slice(0,maxPreview);
+    return out;
   }
   function buildRepeatSuggestion(t,maxMm){
-    const seq=buildWeightedKeys(t.seq||[]),out=[];let total=0,i=0,guard=0;
-    while(seq.length&&guard<5000){
-      const b=cloneSuggestionMaterial(seq[i%seq.length]),len=itemLength(b);
-      if(total+len>maxMm)break;
-      out.push(b);total+=len;i++;guard++;
-      if(total>=maxMm)break;
+    const keys=(t.seq||[]).filter(k=>activeSuggestionKeys().includes(k));
+    if(!keys.length)return [];
+    const unit=keys.map(cloneSuggestionMaterial);
+    const unitMm=unit.reduce((sum,b)=>sum+itemLength(b),0);
+    if(unitMm<=0||unitMm>maxMm)return [];
+    const out=[];
+    let total=0,guard=0;
+    while(total+unitMm<=maxMm+0.000001&&guard<5000){
+      unit.forEach(b=>out.push({...b}));
+      total+=unitMm;
+      guard++;
     }
     return out;
   }
@@ -2673,13 +2744,17 @@ html[data-theme="watercolor"] header .project-inline select{
     const active=activeSuggestionKeys();
     const center=(t.center||[]).filter(k=>active.includes(k)).map(cloneSuggestionMaterial);
     const centerMm=center.reduce((a,b)=>a+itemLength(b),0);
-    const budget=Math.max(0,(maxMm-centerMm)/2),seq=buildWeightedKeys(t.half||[]),half=[];
-    let total=0,i=0,guard=0;
-    while(seq.length&&guard<2500){
-      const b=cloneSuggestionMaterial(seq[i%seq.length]),len=itemLength(b);
-      if(total+len>budget)break;
-      half.push(b);total+=len;i++;guard++;
-      if(total>=budget)break;
+    if(centerMm>maxMm)return [];
+
+    const halfUnit=(t.half||[]).filter(k=>active.includes(k)).map(cloneSuggestionMaterial);
+    const halfUnitMm=halfUnit.reduce((a,b)=>a+itemLength(b),0);
+    const half=[];
+    let halfMm=0,guard=0;
+
+    while(halfUnit.length && halfMm+halfUnitMm<=Math.max(0,(maxMm-centerMm)/2)+0.000001 && guard<2500){
+      halfUnit.forEach(b=>half.push({...b}));
+      halfMm+=halfUnitMm;
+      guard++;
     }
     return [...half,...center,...half.slice().reverse().map(x=>({...x}))];
   }
@@ -2769,8 +2844,10 @@ html[data-theme="watercolor"] header .project-inline select{
       const result=generateSuggestionWithinTarget(t);
       const estimate=result.items;
 
+      const actualKinds=actualSuggestionKinds(estimate);
       card.innerHTML=`<h3>${t.name}</h3>
-      <div class="template-meta">${t.need}種類 / ${suggestionTypeName(t.type)} — ${t.desc}</div>
+      <div class="template-meta">${actualKinds}種類 / ${suggestionTypeName(t.type)} — ${t.desc}</div>
+      <div class="template-sequence">${templateSequenceLabel(t)}</div>
       <div class="template-mini-preview"></div>
       <div class="template-usage">予想使用数：${usageSummaryText(estimate)}</div>
       <div class="template-usage"><strong>${suggestionLengthLabel(result)}</strong></div>
@@ -3046,20 +3123,74 @@ html[data-theme="watercolor"] header .project-inline select{
     return relativeLuminance(hex)>0.72;
   }
 
+
+  function opacityLabel(v){
+    return v==="clear"?"透明":v==="semi"?"半透明":"不透明";
+  }
+  function opacityAlpha(v){
+    return v==="clear"?.16:v==="semi"?.52:1;
+  }
+  function hexToRgba(hex,alpha=1){
+    const s=String(hex||"#FFFFFF").replace("#","");
+    const n=parseInt(s.length===3?s.split("").map(x=>x+x).join(""):s,16);
+    if(!Number.isFinite(n))return `rgba(255,255,255,${alpha})`;
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`;
+  }
+  function syncOpacityButtons(){
+    document.querySelectorAll(".opacity-btn").forEach(b=>b.classList.toggle("active",b.dataset.opacity===selectedOpacity));
+  }
+  function exactTemplateKeys(t){
+    const active=activeSuggestionKeys();
+    if(t.type==="mirror"){
+      const half=(t.half||[]).filter(k=>active.includes(k));
+      const center=(t.center||[]).filter(k=>active.includes(k));
+      return [...half,...center,...half.slice().reverse()];
+    }
+    return (t.seq||[]).filter(k=>active.includes(k));
+  }
+  function templateSequenceLabel(t){
+    const seq=t.type==="mirror"
+      ? [...(t.half||[]),...(t.center||[]),...(t.half||[]).slice().reverse()]
+      : (t.seq||[]);
+    if(!seq.length)return "配列：—";
+    const parts=[];
+    let prev=seq[0],count=1;
+    for(let i=1;i<=seq.length;i++){
+      if(seq[i]===prev)count++;
+      else{
+        parts.push(`${prev}×${count}`);
+        prev=seq[i];count=1;
+      }
+    }
+    return `配列：${parts.join(" → ")}`;
+  }
+  function actualSuggestionKinds(items){
+    const set=new Set();
+    (items||[]).forEach(it=>{
+      const k=matchSuggestionKey(it);
+      if(k)set.add(k);
+    });
+    return set.size;
+  }
+
   function makeBead(b,index,mode="line"){
     const shape=b.shape||"round";
+    const opacity=b.opacity||"opaque";
+    const alpha=opacityAlpha(opacity);
+    const visualColor=hexToRgba(b.color,alpha);
     const el=document.createElement("div");
     if(mode==="u"){
       const sc=uScale==="mid"?" scale-mid":uScale==="big"?" scale-big":"";
-      el.className=`bead u-${b.size}${sc} abs design-item shape-${shape}`;
-    }else el.className=`bead ${cls[b.size]} design-item shape-${shape}`;
-    el.style.backgroundColor=b.color;
-    el.style.setProperty("--shape-color",b.color);
+      el.className=`bead u-${b.size}${sc} abs design-item shape-${shape} opacity-${opacity}`;
+    }else el.className=`bead ${cls[b.size]} design-item shape-${shape} opacity-${opacity}`;
+    el.style.backgroundColor=visualColor;
+    el.style.setProperty("--shape-color",visualColor);
+
     if(shape==="star"||shape==="heart"||shape==="diamond"){
       el.style.backgroundColor="transparent";
-      if(isLightColor(b.color)){
-        el.style.setProperty("--shape-stroke-width", mode==="u" ? "0.7px" : "1px");
-        el.style.setProperty("--shape-stroke-color", "#777777");
+      if(opacity!=="opaque" || isLightColor(b.color)){
+        el.style.setProperty("--shape-stroke-width", mode==="u" ? "0.8px" : "1px");
+        el.style.setProperty("--shape-stroke-color", opacity==="clear" ? "#6F9AAF" : "#777777");
         el.style.setProperty("--shape-shadow", "0 1px 1px rgba(0,0,0,.18)");
       }else{
         el.style.setProperty("--shape-stroke-width", "0px");
@@ -3067,6 +3198,7 @@ html[data-theme="watercolor"] header .project-inline select{
         el.style.setProperty("--shape-shadow", "none");
       }
     }
+    el.title=opacityLabel(opacity);
     if($("showNumbers").checked&&mode==="line"){
       const n=document.createElement("span");n.className="num";n.textContent=index+1;el.appendChild(n);
     }
@@ -3323,11 +3455,11 @@ html[data-theme="watercolor"] header .project-inline select{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"11.7",
+      app:"beads-design-studio",version:"11.8",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
-      beadSelection:{selectedSize,selectedShape,color:$("color").value,qty:Number($("qty").value)||1},
+      beadSelection:{selectedSize,selectedShape,selectedOpacity,color:$("color").value,qty:Number($("qty").value)||1},
       beads:beads.map(b=>({...b})),
       symmetry:{
         left:symmetryLeft.map(b=>({...b})),
@@ -3355,9 +3487,10 @@ html[data-theme="watercolor"] header .project-inline select{
     if(d.beadSelection){
       selectedSize=d.beadSelection.selectedSize||"s";
       selectedShape=d.beadSelection.selectedShape||"round";
+      selectedOpacity=d.beadSelection.selectedOpacity||"opaque";
       if(d.beadSelection.color)setColor(d.beadSelection.color);
       if(d.beadSelection.qty)syncQty(d.beadSelection.qty);
-      syncSizeButtons();syncShapeButtons();
+      syncSizeButtons();syncShapeButtons();syncOpacityButtons();
     }
     document.querySelectorAll(".part-btn").forEach(b=>b.classList.toggle("active",b.dataset.part===selectedPart));
     document.querySelectorAll(".metal-btn").forEach(b=>b.classList.toggle("active",b.dataset.metal===selectedMetal));
@@ -3417,17 +3550,35 @@ html[data-theme="watercolor"] header .project-inline select{
     canvas.toBlob(blob=>downloadBlob(blob,`${safeName($("projectName").value)}.png`),"image/png");
   }
   function drawBeadShape(ctx,x,y,r,item){
-    const shape=item.shape||"round",color=item.color;
-    if(shape==="round"){drawCircle(ctx,x,y,r,color);return}
-    ctx.save();ctx.fillStyle=color;ctx.strokeStyle="rgba(0,0,0,.35)";ctx.lineWidth=1;
+    const shape=item.shape||"round",color=item.color,opacity=item.opacity||"opaque";
+    const alpha=opacityAlpha(opacity);
+    ctx.save();
+    ctx.globalAlpha=alpha;
+
+    if(shape==="round"){
+      drawCircle(ctx,x,y,r,color);
+      ctx.restore();
+      if(opacity!=="opaque"){
+        ctx.save();
+        ctx.strokeStyle=opacity==="clear"?"rgba(64,112,142,.65)":"rgba(70,100,120,.45)";
+        ctx.lineWidth=opacity==="clear"?1.5:1;
+        ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle="rgba(255,255,255,.78)";
+        ctx.beginPath();ctx.ellipse(x-r*.3,y-r*.3,r*.22,r*.14,-.5,0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      }
+      return;
+    }
+
+    ctx.fillStyle=color;ctx.strokeStyle="rgba(0,0,0,.35)";ctx.lineWidth=1;
     if(shape==="oval"){
       ctx.beginPath();ctx.ellipse(x,y,r*1.5,r*.75,0,0,Math.PI*2);ctx.fill();ctx.stroke();
     }else{
       ctx.font=`${Math.max(12,r*2.4)}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
       const glyph=shape==="star"?"★":shape==="heart"?"♥":"◆";
-      if(isLightColor(color)){
+      if(opacity!=="opaque"||isLightColor(color)){
         ctx.lineWidth=Math.max(1,r*.12);
-        ctx.strokeStyle="#777777";
+        ctx.strokeStyle=opacity==="clear"?"#6F9AAF":"#777777";
         ctx.strokeText(glyph,x,y+1);
       }
       ctx.fillStyle=color;
