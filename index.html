@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v11.0</title>
+<title>ビーズ設計スタジオ v11.1</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:#191970; --accent:#b22222; --text:#222;
@@ -783,6 +783,16 @@ header p{font-size:calc(13px * var(--ui-scale))}
 
 
 
+
+/* v11.1 usage balance + accent */
+.usage-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+.accent-panel{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:11px;background:#fff}
+.accent-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.accent-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+.accent-controls input[type="color"]{width:100%;height:40px}
+.accent-summary,.template-usage{margin-top:8px;padding:8px 10px;border-radius:9px;background:#f8f8fb;border:1px dashed var(--line);font-size:12px;color:var(--muted)}
+@media(max-width:560px){.usage-row,.accent-controls{grid-template-columns:1fr}}
+
 /* =========================================================
    v11 Design suggestions inside Pattern tab
    ========================================================= */
@@ -978,7 +988,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v11.0</h1>
+      <h1>ビーズ設計スタジオ v11.1</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -1321,6 +1331,23 @@ header p{font-size:calc(13px * var(--ui-scale))}
         <label>使う種類数</label>
         <select id="suggestMaterialCount"><option value="2">2種類</option><option value="3">3種類</option><option value="4">4種類</option></select>
         <div id="suggestMaterials" class="suggest-materials" style="margin-top:10px"></div>
+        <div class="accent-panel">
+          <div class="accent-head">
+            <div><strong>アクセントビーズ</strong><div class="help" style="margin:2px 0 0">大粒パールなどを個数指定で追加します。</div></div>
+            <button id="toggleAccent" class="secondary">＋ アクセントを追加</button>
+          </div>
+          <div id="accentControls" style="display:none">
+            <div class="accent-controls">
+              <select id="accentSize"><option value="s">小</option><option value="m">中</option><option value="l" selected>大</option></select>
+              <select id="accentShape"><option value="round" selected>丸</option><option value="oval">楕円</option><option value="star">星</option><option value="heart">ハート</option><option value="diamond">菱形</option></select>
+              <input id="accentColor" type="color" value="#F5E6CC">
+              <input id="accentHex" type="text" value="#F5E6CC" maxlength="7">
+              <input id="accentCount" type="number" min="1" max="99" value="5">
+              <select id="accentPlacement"><option value="even">均等に配置</option><option value="center">中央付近</option><option value="mirror">左右対称</option></select>
+            </div>
+            <div id="accentSummary" class="accent-summary"></div>
+          </div>
+        </div>
         <div class="template-filter-row">
           <div><label>デザインタイプ</label><select id="suggestTypeFilter"><option value="all">すべて</option><option value="repeat">繰り返し</option><option value="mirror">左右対称</option><option value="accent">アクセント</option></select></div>
           <div><label>目標長さ</label><div class="result-box" style="margin:0"><strong id="suggestTargetLabel">600 mm</strong></div></div>
@@ -2128,14 +2155,16 @@ header p{font-size:calc(13px * var(--ui-scale))}
   ];
   let suggestionVisibleCount=8;
   const suggestionMaterials={
-    A:{size:"s",shape:"round",color:"#32AECD"},
-    B:{size:"s",shape:"round",color:"#FFFFFF"},
-    C:{size:"m",shape:"round",color:"#C8A96B"},
-    D:{size:"m",shape:"round",color:"#8F78B5"}
+    A:{size:"s",shape:"round",color:"#32AECD",usage:"high"},
+    B:{size:"s",shape:"round",color:"#FFFFFF",usage:"medium"},
+    C:{size:"m",shape:"round",color:"#C8A96B",usage:"low"},
+    D:{size:"m",shape:"round",color:"#8F78B5",usage:"low"}
   };
+  let accentEnabled=false;
+  const accentMaterial={size:"l",shape:"round",color:"#F5E6CC",count:5,placement:"even"};
 
   function suggestionTypeName(t){return t==="mirror"?"左右対称":t==="accent"?"アクセント":"繰り返し"}
-  function cloneSuggestionMaterial(k){const m=suggestionMaterials[k];return {size:m.size,shape:m.shape,color:m.color.toUpperCase()}}
+  function cloneSuggestionMaterial(k){const m=suggestionMaterials[k];return {size:m.size,shape:m.shape,color:m.color.toUpperCase(),source:k}}
   function suggestionShapeName(s){return s==="round"?"丸":s==="oval"?"楕円":s==="star"?"星":s==="heart"?"ハート":"菱形"}
   function renderSuggestionMaterials(){
     const host=$("suggestMaterials"); if(!host)return;
@@ -2150,12 +2179,20 @@ header p{font-size:calc(13px * var(--ui-scale))}
         <select data-sk="${key}" data-sf="shape"><option value="round"${m.shape==="round"?" selected":""}>丸</option><option value="oval"${m.shape==="oval"?" selected":""}>楕円</option><option value="star"${m.shape==="star"?" selected":""}>星</option><option value="heart"${m.shape==="heart"?" selected":""}>ハート</option><option value="diamond"${m.shape==="diamond"?" selected":""}>菱形</option></select>
         <input type="color" value="${m.color}" data-sk="${key}" data-sf="color">
         <input type="text" value="${m.color.toUpperCase()}" maxlength="7" data-sk="${key}" data-sf="hex">
+      </div>
+      <div class="usage-row">
+        <select data-sk="${key}" data-sf="usage">
+          <option value="high"${m.usage==="high"?" selected":""}>多め</option>
+          <option value="medium"${m.usage==="medium"?" selected":""}>普通</option>
+          <option value="low"${m.usage==="low"?" selected":""}>少なめ</option>
+        </select>
+        <div class="result-box" style="margin:0;padding:8px 10px">使用量：<strong>${m.usage==="high"?"多め":m.usage==="medium"?"普通":"少なめ"}</strong></div>
       </div>`;
       host.appendChild(box);
     });
     host.querySelectorAll("[data-sk]").forEach(el=>{
       const key=el.dataset.sk, field=el.dataset.sf;
-      el.addEventListener(field==="size"||field==="shape"?"change":"input",()=>{
+      el.addEventListener(field==="size"||field==="shape"||field==="usage"?"change":"input",()=>{
         if(field==="hex"){
           if(!/^#[0-9A-Fa-f]{6}$/.test(el.value.trim()))return;
           suggestionMaterials[key].color=el.value.trim().toUpperCase();
@@ -2164,6 +2201,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
           suggestionMaterials[key].color=el.value.toUpperCase();
           host.querySelector(`[data-sk="${key}"][data-sf="hex"]`).value=suggestionMaterials[key].color;
         }else suggestionMaterials[key][field]=el.value;
+        if(field==="usage"){renderSuggestionMaterials();renderTemplateGallery();return}
         renderSuggestionMaterialPreview(key);renderTemplateGallery();
       });
     });
@@ -2177,9 +2215,87 @@ header p{font-size:calc(13px * var(--ui-scale))}
     host.appendChild(bead);
     const t=document.createElement("span");t.textContent=`${sizeName[m.size]}・${suggestionShapeName(m.shape)}・${m.color.toUpperCase()}`;host.appendChild(t);
   }
+
+  function usageWeight(v){return v==="high"?6:v==="medium"?3:1}
+  function usageLabel(v){return v==="high"?"多め":v==="medium"?"普通":"少なめ"}
+  function activeSuggestionKeys(){return ["A","B","C","D"].slice(0,Number($("suggestMaterialCount")?.value||2))}
+  function buildWeightedKeys(baseKeys){
+    const active=activeSuggestionKeys();
+    const keys=(baseKeys||[]).filter(k=>active.includes(k));
+    const src=keys.length?keys:active,out=[];
+    src.forEach(k=>{for(let i=0;i<usageWeight(suggestionMaterials[k]?.usage);i++)out.push(k)});
+    return out.length?out:active;
+  }
+  function accentBead(){return {size:accentMaterial.size,shape:accentMaterial.shape,color:accentMaterial.color.toUpperCase(),source:"ACC"}}
+  function distributeAccent(items,count,placement){
+    if(!accentEnabled||count<=0||!items.length)return items.map(x=>({...x}));
+    const out=items.map(x=>({...x})),acc=Array.from({length:count},accentBead);
+    if(placement==="center"){out.splice(Math.floor(out.length/2),0,...acc);return out}
+    if(placement==="mirror"){
+      let left=Math.floor(count/2),right=left,center=count%2,inserted=0;
+      for(let i=1;i<=left;i++){let pos=Math.floor((out.length/2)*(i/(left+1)))+inserted;out.splice(pos,0,{...acc[i-1]});inserted++}
+      if(center){out.splice(Math.floor(out.length/2),0,{...acc[left]});inserted++}
+      for(let i=1;i<=right;i++){let pos=Math.floor(out.length-(out.length/2)*(i/(right+1)));out.splice(pos,0,{...acc[left+center+i-1]})}
+      return out
+    }
+    const base=out.length;
+    for(let i=0;i<count;i++){const pos=Math.round((i+1)*(base/(count+1)))+i;out.splice(Math.min(out.length,pos),0,{...acc[i]})}
+    return out;
+  }
+  function matchSuggestionKey(it){
+    if(it?.source==="ACC")return "ACC";
+    if(["A","B","C","D"].includes(it?.source))return it.source;
+    return activeSuggestionKeys().find(k=>{
+      const m=suggestionMaterials[k];
+      return it.size===m.size&&(it.shape||"round")===m.shape&&String(it.color).toUpperCase()===m.color.toUpperCase();
+    })||null;
+  }
+  function usageSummaryText(items){
+    const counts={A:0,B:0,C:0,D:0,ACC:0};
+    items.forEach(it=>{const k=matchSuggestionKey(it);if(k)counts[k]++});
+    const parts=activeSuggestionKeys().map(k=>`${k}:${counts[k]}個`);
+    if(accentEnabled)parts.push(`アクセント:${counts.ACC}個`);
+    return parts.join(" / ");
+  }
+  function renderAccentSummary(){
+    const box=$("accentSummary");if(!box)return;
+    const place=accentMaterial.placement==="even"?"均等":accentMaterial.placement==="center"?"中央付近":"左右対称";
+    box.textContent=`${sizeName[accentMaterial.size]}・${suggestionShapeName(accentMaterial.shape)}・${accentMaterial.color.toUpperCase()} / ${accentMaterial.count}個 / ${place}`;
+  }
   function templatePreviewSequence(t){
-    if(t.type==="mirror"){const left=[...t.half,...t.half];return [...left,...(t.center||[]),...left.slice().reverse()]}
-    const out=[];while(out.length<20)out.push(...t.seq);return out.slice(0,20);
+    if(t.type==="mirror"){
+      const seq=buildWeightedKeys(t.half||[]),left=[];
+      while(left.length<8)left.push(...seq);
+      const center=(t.center||[]).filter(k=>activeSuggestionKeys().includes(k));
+      return [...left.slice(0,8),...center,...left.slice(0,8).reverse()].slice(0,20);
+    }
+    const seq=buildWeightedKeys(t.seq||[]),out=[];
+    while(out.length<20)out.push(...seq);
+    return out.slice(0,20);
+  }
+  function buildRepeatSuggestion(t,maxMm){
+    const seq=buildWeightedKeys(t.seq||[]),out=[];let total=0,i=0,guard=0;
+    while(seq.length&&guard<5000){
+      const b=cloneSuggestionMaterial(seq[i%seq.length]),len=itemLength(b);
+      if(out.length&&total+len>maxMm)break;
+      out.push(b);total+=len;i++;guard++;
+      if(total>=maxMm)break;
+    }
+    return out;
+  }
+  function buildMirrorSuggestion(t,maxMm){
+    const active=activeSuggestionKeys();
+    const center=(t.center||[]).filter(k=>active.includes(k)).map(cloneSuggestionMaterial);
+    const centerMm=center.reduce((a,b)=>a+itemLength(b),0);
+    const budget=Math.max(0,(maxMm-centerMm)/2),seq=buildWeightedKeys(t.half||[]),half=[];
+    let total=0,i=0,guard=0;
+    while(seq.length&&guard<2500){
+      const b=cloneSuggestionMaterial(seq[i%seq.length]),len=itemLength(b);
+      if(half.length&&total+len>budget)break;
+      half.push(b);total+=len;i++;guard++;
+      if(total>=budget)break;
+    }
+    return [...half,...center,...half.slice().reverse().map(x=>({...x}))];
   }
   function renderTemplateGallery(){
     const host=$("templateGallery");if(!host)return;
@@ -2189,45 +2305,24 @@ header p{font-size:calc(13px * var(--ui-scale))}
     host.innerHTML="";
     eligible.slice(0,suggestionVisibleCount).forEach(t=>{
       const card=document.createElement("div");card.className="template-card";
+      const base=t.type==="mirror"?buildMirrorSuggestion(t,targetMm()):buildRepeatSuggestion(t,targetMm());
+      const estimate=distributeAccent(base,accentEnabled?accentMaterial.count:0,accentMaterial.placement);
       card.innerHTML=`<h3>${t.name}</h3><div class="template-meta">${t.need}種類 / ${suggestionTypeName(t.type)} — ${t.desc}</div><div class="template-mini-preview"></div>
-      <div class="actions"><button class="secondary template-block">1ブロック追加</button><button class="primary template-apply" style="margin-top:0">この案で作成</button></div>`;
+      <div class="template-usage">予想使用数：${usageSummaryText(estimate)}</div>
+      <div class="actions"><button class="primary template-apply" style="margin-top:0">この案で作成</button></div>`;
       const prev=card.querySelector(".template-mini-preview");
       templatePreviewSequence(t).forEach((key,i)=>{const b=makeBead(cloneSuggestionMaterial(key),i,"line");b.classList.remove("design-item");prev.appendChild(b)});
-      card.querySelector(".template-block").onclick=()=>applySuggestionTemplate(t,false);
-      card.querySelector(".template-apply").onclick=()=>applySuggestionTemplate(t,true);
+      card.querySelector(".template-apply").onclick=()=>applySuggestionTemplate(t);
       host.appendChild(card);
     });
     $("templateMore").style.display=eligible.length>suggestionVisibleCount?"block":"none";
   }
-  function buildRepeatSuggestion(t,maxMm){
-    const out=[];let total=0,i=0,guard=0;
-    while(t.seq.length&&guard<5000){
-      const b=cloneSuggestionMaterial(t.seq[i%t.seq.length]),len=itemLength(b);
-      if(out.length&&total+len>maxMm)break;
-      out.push(b);total+=len;i++;guard++;
-      if(total>=maxMm)break;
-    }return out;
-  }
-  function buildMirrorSuggestion(t,maxMm){
-    const center=(t.center||[]).map(cloneSuggestionMaterial),centerMm=center.reduce((a,b)=>a+itemLength(b),0);
-    const budget=Math.max(0,(maxMm-centerMm)/2),half=[];let total=0,i=0,guard=0;
-    while(t.half.length&&guard<2500){
-      const b=cloneSuggestionMaterial(t.half[i%t.half.length]),len=itemLength(b);
-      if(half.length&&total+len>budget)break;
-      half.push(b);total+=len;i++;guard++;if(total>=budget)break;
-    }
-    return [...half,...center,...half.slice().reverse().map(x=>({...x}))];
-  }
-  function applySuggestionTemplate(t,replaceAll){
-    const generated=t.type==="mirror"?buildMirrorSuggestion(t,targetMm()):buildRepeatSuggestion(t,targetMm());
+  function applySuggestionTemplate(t){
+    const base=t.type==="mirror"?buildMirrorSuggestion(t,targetMm()):buildRepeatSuggestion(t,targetMm());
+    const generated=distributeAccent(base,accentEnabled?accentMaterial.count:0,accentMaterial.placement);
     if(!generated.length){alert("デザインを生成できませんでした。実寸設定を確認してください。");return}
-    if(replaceAll){
-      if(beads.length&&!confirm("現在の完成デザインを、このデザイン案で置き換えますか？"))return;
-      pushHistory();beads.length=0;generated.forEach(b=>beads.push({...b}));selectedItemIndex=null;renderAll();setTab("design");
-    }else{
-      const unit=t.type==="mirror"?[...t.half,...(t.center||[]),...t.half.slice().reverse()]:t.seq;
-      pushHistory();unit.forEach(k=>beads.push(cloneSuggestionMaterial(k)));selectedItemIndex=beads.length?beads.length-1:null;renderAll();
-    }
+    if(beads.length&&!confirm("現在の完成デザインを、このデザイン案で置き換えますか？"))return;
+    pushHistory();beads.length=0;generated.forEach(b=>beads.push({...b}));selectedItemIndex=null;renderAll();setTab("design");
   }
   document.querySelectorAll(".pattern-subnav-btn").forEach(btn=>btn.onclick=()=>{
     document.querySelectorAll(".pattern-subnav-btn").forEach(x=>x.classList.toggle("active",x===btn));
@@ -2238,6 +2333,33 @@ header p{font-size:calc(13px * var(--ui-scale))}
   $("suggestMaterialCount").addEventListener("change",()=>{suggestionVisibleCount=8;renderSuggestionMaterials();renderTemplateGallery()});
   $("suggestTypeFilter").addEventListener("change",()=>{suggestionVisibleCount=8;renderTemplateGallery()});
   $("templateMore").onclick=()=>{suggestionVisibleCount+=8;renderTemplateGallery()};
+
+  $("toggleAccent").onclick=()=>{
+    accentEnabled=!accentEnabled;
+    $("accentControls").style.display=accentEnabled?"block":"none";
+    $("toggleAccent").textContent=accentEnabled?"アクセントを外す":"＋ アクセントを追加";
+    renderAccentSummary();
+    renderTemplateGallery();
+  };
+  [["accentSize","size"],["accentShape","shape"],["accentColor","color"],["accentCount","count"],["accentPlacement","placement"]].forEach(([id,field])=>{
+    $(id).addEventListener(id==="accentColor"?"input":"change",()=>{
+      const v=$(id).value;
+      accentMaterial[field]=field==="count"?Math.max(1,Math.min(99,Number(v)||1)):field==="color"?v.toUpperCase():v;
+      if(field==="color")$("accentHex").value=accentMaterial.color;
+      renderAccentSummary();
+      renderTemplateGallery();
+    });
+  });
+  $("accentHex").addEventListener("input",()=>{
+    const v=$("accentHex").value.trim();
+    if(/^#[0-9A-Fa-f]{6}$/.test(v)){
+      accentMaterial.color=v.toUpperCase();
+      $("accentColor").value=v;
+      renderAccentSummary();
+      renderTemplateGallery();
+    }
+  });
+
 
   // auto generation
 
@@ -2711,7 +2833,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"11.0",
+      app:"beads-design-studio",version:"11.1",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
@@ -2801,7 +2923,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
     ctx.fillStyle="#191970";ctx.font='bold 34px "Meiryo UI", Meiryo, sans-serif';ctx.fillText($("projectName").value||"ビーズデザイン",60,62);
     ctx.fillStyle="#444";ctx.font='20px "Meiryo UI", Meiryo, sans-serif';ctx.fillText(`${$("projectType").value}　目標 ${fmt(targetMm())}mm　現在 ${fmt(currentMm())}mm`,60,98);
     if(viewMode==="u")drawUToCanvas(ctx,80,140,1040,680);else drawLineToCanvas(ctx,70,180,1060,560);
-    ctx.fillStyle="#666";ctx.font='16px "Meiryo UI", Meiryo, sans-serif';ctx.fillText("Generated by ビーズ設計スタジオ v11.0",60,860);
+    ctx.fillStyle="#666";ctx.font='16px "Meiryo UI", Meiryo, sans-serif';ctx.fillText("Generated by ビーズ設計スタジオ v11.1",60,860);
     canvas.toBlob(blob=>downloadBlob(blob,`${safeName($("projectName").value)}.png`),"image/png");
   }
   function drawBeadShape(ctx,x,y,r,item){
@@ -2891,6 +3013,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
   syncLibraryFormFromCurrent();
   renderLibrary();
   renderSuggestionMaterials();
+  renderAccentSummary();
   renderTemplateGallery();
   ["targetLength","mmS","mmM","mmL"].forEach(id=>$(id)?.addEventListener("input",()=>renderTemplateGallery()));
   renderAll();
