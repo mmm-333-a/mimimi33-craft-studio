@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v11.8</title>
+<title>ビーズ設計スタジオ v11.8.1</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1415,7 +1415,7 @@ html[data-theme="watercolor"] header .project-inline select{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v11.8</h1>
+      <h1>ビーズ設計スタジオ v11.8.1</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -1706,7 +1706,7 @@ html[data-theme="watercolor"] header .project-inline select{
 <div class="panel-grid">
   <section class="card">
     <h2>パターン用ビーズ設定</h2>
-    <div class="help">デザインタブと同じ選択状態を共有します。ここで変更したサイズ・色・個数は、デザインタブにも反映されます。</div>
+    <div class="help">デザインタブと同じ選択状態を共有します。ここで変更したサイズ・形状・色・透明度・個数は、デザインタブにも反映されます。</div>
 
     <label>サイズ</label>
     <div class="size-row" id="patternSizeRow">
@@ -1741,6 +1741,14 @@ html[data-theme="watercolor"] header .project-inline select{
       <button data-color="#555555" style="background:#555"></button>
       <button data-color="#111111" style="background:#111"></button>
     </div>
+
+    <label>透明度</label>
+    <div class="opacity-row" id="patternOpacityRow">
+      <button class="opacity-btn active" data-opacity="opaque">不透明</button>
+      <button class="opacity-btn" data-opacity="semi">半透明</button>
+      <button class="opacity-btn" data-opacity="clear">透明</button>
+    </div>
+    <div class="help" style="margin-top:6px">デザインタブと同じ透明度を共有します。</div>
 
     <label>個数</label>
     <input id="patternQty" type="number" min="1" max="500" value="1">
@@ -2491,7 +2499,7 @@ html[data-theme="watercolor"] header .project-inline select{
     if($("patternQty"))$("patternQty").value=n;
     if($("patternColor"))$("patternColor").value=$("color").value;
     if($("patternHex"))$("patternHex").value=$("color").value.toUpperCase();
-    syncSizeButtons();syncShapeButtons();
+    syncSizeButtons();syncShapeButtons();syncOpacityButtons();
     const shapeName={round:"丸",oval:"楕円",star:"星",heart:"ハート",diamond:"菱形"}[selectedShape];
     $("patternSelectedInfo").innerHTML=`現在選択：<strong>${sizeName[selectedSize]}</strong> ／ ${shapeName} ／ ${$("color").value.toUpperCase()} ／ ${opacityLabel(selectedOpacity)} ／ 個数 ${n}`;
   }
@@ -3455,7 +3463,7 @@ html[data-theme="watercolor"] header .project-inline select{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"11.8",
+      app:"beads-design-studio",version:"11.8.1",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
