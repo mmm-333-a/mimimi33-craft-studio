@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v10.3.2</title>
+<title>ビーズ設計スタジオ v11.0</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:#191970; --accent:#b22222; --text:#222;
@@ -782,6 +782,31 @@ header p{font-size:calc(13px * var(--ui-scale))}
 
 
 
+
+/* =========================================================
+   v11 Design suggestions inside Pattern tab
+   ========================================================= */
+.pattern-subnav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+.pattern-subnav button{border:1px solid var(--sub);background:#fff;color:var(--sub);padding:9px 14px;font-weight:700}
+.pattern-subnav button.active{background:var(--sub);color:#fff}
+.pattern-subview{display:none}.pattern-subview.active{display:block}
+.suggest-materials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.suggest-material{border:1px solid var(--line);border-radius:12px;padding:10px;background:#f8f8fb}
+.suggest-material-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.suggest-material-name{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--sub);color:#fff;font-weight:700;flex:0 0 auto}
+.suggest-material-controls{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.suggest-material-controls input[type="color"]{width:100%;height:40px}.suggest-material-controls select{width:100%}
+.suggest-preview-bead{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.template-filter-row{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:10px 0 6px}.template-filter-row>div{min-width:150px;flex:1}
+.template-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.template-card{border:1px solid var(--line);border-radius:13px;background:#fff;padding:11px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.template-card h3{margin:0 0 3px;font-size:14px}.template-meta{font-size:11px;color:var(--muted);margin-bottom:7px}
+.template-mini-preview{min-height:58px;border:1px dashed #c8c8d3;border-radius:9px;background:#fafafa;padding:9px;display:flex;gap:1px;align-items:center;flex-wrap:wrap}
+.template-mini-preview .bead{pointer-events:none;transform:scale(.72);transform-origin:center}
+.template-card .actions{margin-top:8px}.template-card .actions button{flex:1}.template-more{width:100%;margin-top:10px}
+.template-empty{padding:18px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);text-align:center}
+@media(max-width:720px){.suggest-materials,.template-gallery{grid-template-columns:1fr}}
+
 /* =========================================================
    v10.3 Dynamic patterns + symmetry pattern assist
    ========================================================= */
@@ -953,7 +978,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v10.3.2</h1>
+      <h1>ビーズ設計スタジオ v11.0</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -1227,6 +1252,12 @@ header p{font-size:calc(13px * var(--ui-scale))}
 
 <!-- PATTERNS -->
 <section id="tab-patterns" class="tab-panel">
+  <div class="pattern-subnav">
+    <button class="pattern-subnav-btn active" data-pattern-view="custom">自作パターン</button>
+    <button class="pattern-subnav-btn" data-pattern-view="suggest">デザイン案</button>
+  </div>
+
+  <div id="patternViewCustom" class="pattern-subview active">
 <div class="panel-grid">
   <section class="card">
     <h2>パターン用ビーズ設定</h2>
@@ -1280,6 +1311,30 @@ header p{font-size:calc(13px * var(--ui-scale))}
     <div id="patternsHost"></div>
   </section>
 </div>
+  </div>
+
+  <div id="patternViewSuggest" class="pattern-subview">
+    <div class="panel-grid">
+      <section class="card">
+        <h2>使うビーズを決める</h2>
+        <div class="help">A〜Dに使いたいビーズの色・サイズ・形を設定すると、その組合せでデザイン案を表示します。</div>
+        <label>使う種類数</label>
+        <select id="suggestMaterialCount"><option value="2">2種類</option><option value="3">3種類</option><option value="4">4種類</option></select>
+        <div id="suggestMaterials" class="suggest-materials" style="margin-top:10px"></div>
+        <div class="template-filter-row">
+          <div><label>デザインタイプ</label><select id="suggestTypeFilter"><option value="all">すべて</option><option value="repeat">繰り返し</option><option value="mirror">左右対称</option><option value="accent">アクセント</option></select></div>
+          <div><label>目標長さ</label><div class="result-box" style="margin:0"><strong id="suggestTargetLabel">600 mm</strong></div></div>
+        </div>
+        <div class="help note-accent">「この案で作成」は現在のデザインを置き換えます。③設計・計算の目標長さと実寸設定を使います。</div>
+      </section>
+      <section class="card">
+        <h2>デザイン案</h2>
+        <div class="help">最初は8案だけ表示し、「もっと見る」で追加表示します。</div>
+        <div id="templateGallery" class="template-gallery"></div>
+        <button id="templateMore" class="secondary template-more" style="display:none">もっと見る</button>
+      </section>
+    </div>
+  </div>
 </section>
 
 <!-- CALC -->
@@ -2050,6 +2105,140 @@ header p{font-size:calc(13px * var(--ui-scale))}
     cards[cards.length-1]?.scrollIntoView({behavior:"smooth",block:"nearest"});
   };
 
+
+  const suggestionTemplates=[
+    {id:"alt2",name:"2色交互",need:2,type:"repeat",seq:["A","B"],desc:"AとBを1個ずつ交互"},
+    {id:"pair2",name:"2個ずつ交互",need:2,type:"repeat",seq:["A","A","B","B"],desc:"まとまり感のある2色"},
+    {id:"threeOne",name:"3＋1アクセント",need:2,type:"accent",seq:["A","A","A","B"],desc:"Aを主役、Bをアクセント"},
+    {id:"fiveOne",name:"5＋1アクセント",need:2,type:"accent",seq:["A","A","A","A","A","B"],desc:"控えめな差し色"},
+    {id:"twoOne",name:"2＋1リズム",need:2,type:"repeat",seq:["A","A","B"],desc:"細かなリズム感"},
+    {id:"sand2",name:"サンド",need:2,type:"repeat",seq:["A","B","A"],desc:"BをAで挟む"},
+    {id:"mirror2",name:"中央1点・左右対称",need:2,type:"mirror",half:["A","A","A","B"],center:["B"],desc:"中央にBを1個"},
+    {id:"mirror2wide",name:"中央3点・左右対称",need:2,type:"mirror",half:["A","A","B"],center:["B","B","B"],desc:"中央を少し強調"},
+    {id:"tri",name:"3色サイクル",need:3,type:"repeat",seq:["A","B","C"],desc:"3色を均等に"},
+    {id:"triPair",name:"3色ペア",need:3,type:"repeat",seq:["A","A","B","B","C","C"],desc:"2個ずつ切替"},
+    {id:"abaC",name:"A-B-A-C",need:3,type:"repeat",seq:["A","B","A","C"],desc:"Aを基調にB/Cを交互"},
+    {id:"accent3",name:"中央色アクセント",need:3,type:"accent",seq:["A","A","B","C","B"],desc:"Cをポイントに"},
+    {id:"mirror3",name:"3色左右対称",need:3,type:"mirror",half:["A","A","B","A","C"],center:["C"],desc:"Cを中央に置く"},
+    {id:"mirrorPearl",name:"中央大粒向け",need:3,type:"mirror",half:["A","A","B","A"],center:["C"],desc:"Cを大粒にすると映える"},
+    {id:"fourCycle",name:"4色サイクル",need:4,type:"repeat",seq:["A","B","C","D"],desc:"4種類を均等に"},
+    {id:"fourSoft",name:"A基調4色",need:4,type:"accent",seq:["A","A","B","A","C","A","D"],desc:"Aを多めに使う"},
+    {id:"fourMirror",name:"4色左右対称",need:4,type:"mirror",half:["A","B","A","C","A","D"],center:["D"],desc:"Dを中央アクセント"},
+    {id:"fourCluster",name:"4色クラスター",need:4,type:"repeat",seq:["A","A","B","C","C","D"],desc:"色の塊を作る"}
+  ];
+  let suggestionVisibleCount=8;
+  const suggestionMaterials={
+    A:{size:"s",shape:"round",color:"#32AECD"},
+    B:{size:"s",shape:"round",color:"#FFFFFF"},
+    C:{size:"m",shape:"round",color:"#C8A96B"},
+    D:{size:"m",shape:"round",color:"#8F78B5"}
+  };
+
+  function suggestionTypeName(t){return t==="mirror"?"左右対称":t==="accent"?"アクセント":"繰り返し"}
+  function cloneSuggestionMaterial(k){const m=suggestionMaterials[k];return {size:m.size,shape:m.shape,color:m.color.toUpperCase()}}
+  function suggestionShapeName(s){return s==="round"?"丸":s==="oval"?"楕円":s==="star"?"星":s==="heart"?"ハート":"菱形"}
+  function renderSuggestionMaterials(){
+    const host=$("suggestMaterials"); if(!host)return;
+    host.innerHTML="";
+    const count=Number($("suggestMaterialCount").value||2);
+    ["A","B","C","D"].slice(0,count).forEach(key=>{
+      const m=suggestionMaterials[key],box=document.createElement("div");
+      box.className="suggest-material";
+      box.innerHTML=`<div class="suggest-material-head"><span class="suggest-material-name">${key}</span><span class="suggest-preview-bead" id="suggestPreview${key}"></span></div>
+      <div class="suggest-material-controls">
+        <select data-sk="${key}" data-sf="size"><option value="s"${m.size==="s"?" selected":""}>小</option><option value="m"${m.size==="m"?" selected":""}>中</option><option value="l"${m.size==="l"?" selected":""}>大</option></select>
+        <select data-sk="${key}" data-sf="shape"><option value="round"${m.shape==="round"?" selected":""}>丸</option><option value="oval"${m.shape==="oval"?" selected":""}>楕円</option><option value="star"${m.shape==="star"?" selected":""}>星</option><option value="heart"${m.shape==="heart"?" selected":""}>ハート</option><option value="diamond"${m.shape==="diamond"?" selected":""}>菱形</option></select>
+        <input type="color" value="${m.color}" data-sk="${key}" data-sf="color">
+        <input type="text" value="${m.color.toUpperCase()}" maxlength="7" data-sk="${key}" data-sf="hex">
+      </div>`;
+      host.appendChild(box);
+    });
+    host.querySelectorAll("[data-sk]").forEach(el=>{
+      const key=el.dataset.sk, field=el.dataset.sf;
+      el.addEventListener(field==="size"||field==="shape"?"change":"input",()=>{
+        if(field==="hex"){
+          if(!/^#[0-9A-Fa-f]{6}$/.test(el.value.trim()))return;
+          suggestionMaterials[key].color=el.value.trim().toUpperCase();
+          host.querySelector(`[data-sk="${key}"][data-sf="color"]`).value=el.value.trim();
+        }else if(field==="color"){
+          suggestionMaterials[key].color=el.value.toUpperCase();
+          host.querySelector(`[data-sk="${key}"][data-sf="hex"]`).value=suggestionMaterials[key].color;
+        }else suggestionMaterials[key][field]=el.value;
+        renderSuggestionMaterialPreview(key);renderTemplateGallery();
+      });
+    });
+    ["A","B","C","D"].slice(0,count).forEach(renderSuggestionMaterialPreview);
+  }
+  function renderSuggestionMaterialPreview(key){
+    const host=$(`suggestPreview${key}`); if(!host)return;
+    host.innerHTML="";
+    const m=suggestionMaterials[key], bead=makeBead(m,0,"line");
+    bead.classList.remove("design-item");bead.style.pointerEvents="none";bead.style.transform="scale(.65)";
+    host.appendChild(bead);
+    const t=document.createElement("span");t.textContent=`${sizeName[m.size]}・${suggestionShapeName(m.shape)}・${m.color.toUpperCase()}`;host.appendChild(t);
+  }
+  function templatePreviewSequence(t){
+    if(t.type==="mirror"){const left=[...t.half,...t.half];return [...left,...(t.center||[]),...left.slice().reverse()]}
+    const out=[];while(out.length<20)out.push(...t.seq);return out.slice(0,20);
+  }
+  function renderTemplateGallery(){
+    const host=$("templateGallery");if(!host)return;
+    $("suggestTargetLabel").textContent=`${fmt(targetMm())} mm`;
+    const count=Number($("suggestMaterialCount").value||2),filter=$("suggestTypeFilter").value||"all";
+    const eligible=suggestionTemplates.filter(t=>t.need<=count&&(filter==="all"||t.type===filter));
+    host.innerHTML="";
+    eligible.slice(0,suggestionVisibleCount).forEach(t=>{
+      const card=document.createElement("div");card.className="template-card";
+      card.innerHTML=`<h3>${t.name}</h3><div class="template-meta">${t.need}種類 / ${suggestionTypeName(t.type)} — ${t.desc}</div><div class="template-mini-preview"></div>
+      <div class="actions"><button class="secondary template-block">1ブロック追加</button><button class="primary template-apply" style="margin-top:0">この案で作成</button></div>`;
+      const prev=card.querySelector(".template-mini-preview");
+      templatePreviewSequence(t).forEach((key,i)=>{const b=makeBead(cloneSuggestionMaterial(key),i,"line");b.classList.remove("design-item");prev.appendChild(b)});
+      card.querySelector(".template-block").onclick=()=>applySuggestionTemplate(t,false);
+      card.querySelector(".template-apply").onclick=()=>applySuggestionTemplate(t,true);
+      host.appendChild(card);
+    });
+    $("templateMore").style.display=eligible.length>suggestionVisibleCount?"block":"none";
+  }
+  function buildRepeatSuggestion(t,maxMm){
+    const out=[];let total=0,i=0,guard=0;
+    while(t.seq.length&&guard<5000){
+      const b=cloneSuggestionMaterial(t.seq[i%t.seq.length]),len=itemLength(b);
+      if(out.length&&total+len>maxMm)break;
+      out.push(b);total+=len;i++;guard++;
+      if(total>=maxMm)break;
+    }return out;
+  }
+  function buildMirrorSuggestion(t,maxMm){
+    const center=(t.center||[]).map(cloneSuggestionMaterial),centerMm=center.reduce((a,b)=>a+itemLength(b),0);
+    const budget=Math.max(0,(maxMm-centerMm)/2),half=[];let total=0,i=0,guard=0;
+    while(t.half.length&&guard<2500){
+      const b=cloneSuggestionMaterial(t.half[i%t.half.length]),len=itemLength(b);
+      if(half.length&&total+len>budget)break;
+      half.push(b);total+=len;i++;guard++;if(total>=budget)break;
+    }
+    return [...half,...center,...half.slice().reverse().map(x=>({...x}))];
+  }
+  function applySuggestionTemplate(t,replaceAll){
+    const generated=t.type==="mirror"?buildMirrorSuggestion(t,targetMm()):buildRepeatSuggestion(t,targetMm());
+    if(!generated.length){alert("デザインを生成できませんでした。実寸設定を確認してください。");return}
+    if(replaceAll){
+      if(beads.length&&!confirm("現在の完成デザインを、このデザイン案で置き換えますか？"))return;
+      pushHistory();beads.length=0;generated.forEach(b=>beads.push({...b}));selectedItemIndex=null;renderAll();setTab("design");
+    }else{
+      const unit=t.type==="mirror"?[...t.half,...(t.center||[]),...t.half.slice().reverse()]:t.seq;
+      pushHistory();unit.forEach(k=>beads.push(cloneSuggestionMaterial(k)));selectedItemIndex=beads.length?beads.length-1:null;renderAll();
+    }
+  }
+  document.querySelectorAll(".pattern-subnav-btn").forEach(btn=>btn.onclick=()=>{
+    document.querySelectorAll(".pattern-subnav-btn").forEach(x=>x.classList.toggle("active",x===btn));
+    $("patternViewCustom").classList.toggle("active",btn.dataset.patternView==="custom");
+    $("patternViewSuggest").classList.toggle("active",btn.dataset.patternView==="suggest");
+    if(btn.dataset.patternView==="suggest"){renderSuggestionMaterials();renderTemplateGallery()}
+  });
+  $("suggestMaterialCount").addEventListener("change",()=>{suggestionVisibleCount=8;renderSuggestionMaterials();renderTemplateGallery()});
+  $("suggestTypeFilter").addEventListener("change",()=>{suggestionVisibleCount=8;renderTemplateGallery()});
+  $("templateMore").onclick=()=>{suggestionVisibleCount+=8;renderTemplateGallery()};
+
   // auto generation
 
   function validHex(v){return /^#[0-9A-Fa-f]{6}$/.test(String(v).trim())}
@@ -2522,7 +2711,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"10.3.2",
+      app:"beads-design-studio",version:"11.0",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
@@ -2612,7 +2801,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
     ctx.fillStyle="#191970";ctx.font='bold 34px "Meiryo UI", Meiryo, sans-serif';ctx.fillText($("projectName").value||"ビーズデザイン",60,62);
     ctx.fillStyle="#444";ctx.font='20px "Meiryo UI", Meiryo, sans-serif';ctx.fillText(`${$("projectType").value}　目標 ${fmt(targetMm())}mm　現在 ${fmt(currentMm())}mm`,60,98);
     if(viewMode==="u")drawUToCanvas(ctx,80,140,1040,680);else drawLineToCanvas(ctx,70,180,1060,560);
-    ctx.fillStyle="#666";ctx.font='16px "Meiryo UI", Meiryo, sans-serif';ctx.fillText("Generated by ビーズ設計スタジオ v10.3.2",60,860);
+    ctx.fillStyle="#666";ctx.font='16px "Meiryo UI", Meiryo, sans-serif';ctx.fillText("Generated by ビーズ設計スタジオ v11.0",60,860);
     canvas.toBlob(blob=>downloadBlob(blob,`${safeName($("projectName").value)}.png`),"image/png");
   }
   function drawBeadShape(ctx,x,y,r,item){
@@ -2701,6 +2890,9 @@ header p{font-size:calc(13px * var(--ui-scale))}
   setupLibraryEvents();
   syncLibraryFormFromCurrent();
   renderLibrary();
+  renderSuggestionMaterials();
+  renderTemplateGallery();
+  ["targetLength","mmS","mmM","mmL"].forEach(id=>$(id)?.addEventListener("input",()=>renderTemplateGallery()));
   renderAll();
 })();
 </script>
