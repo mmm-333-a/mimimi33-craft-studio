@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v11.1.1</title>
+<title>ビーズ設計スタジオ v11.3</title>
 <style>
 :root{
-  --base:#f5f5f5; --sub:#191970; --accent:#b22222; --text:#222;
+  --base:#f5f5f5; --sub:var(--theme-main,#66507A); --accent:#b22222; --text:#222;
   --card:#fff; --line:#d9d9e3; --muted:#666;
 }
 *{box-sizing:border-box}
@@ -1038,6 +1038,109 @@ header p{font-size:calc(13px * var(--ui-scale))}
   }
 }
 
+
+/* =========================================================
+   v11.2 Proposal UI / preview readability refinement
+   ========================================================= */
+
+/* 「使用量：多め」等は補足情報として周囲と同程度にする */
+#patternViewSuggest .usage-row .result-box{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  font-size:12px;
+  line-height:1.4;
+  font-weight:400;
+  padding:8px 10px !important;
+}
+#patternViewSuggest .usage-row .result-box strong{
+  font-size:13px;
+  line-height:1.4;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+/* デザイン案のプレビューを少し広く・高くして判別しやすくする */
+#patternViewSuggest .template-mini-preview{
+  min-height:82px;
+  padding:12px 10px;
+  gap:3px;
+  align-content:center;
+  overflow:hidden;
+}
+#patternViewSuggest .template-mini-preview .bead{
+  transform:scale(.88);
+  transform-origin:center;
+  margin:1px;
+}
+
+/* 白・淡色ビーズは背景に溶けないよう輪郭を強める */
+#patternViewSuggest .template-mini-preview .bead{
+  border-color:rgba(0,0,0,.32);
+  box-shadow:
+    inset -2px -2px 4px rgba(0,0,0,.13),
+    inset 2px 2px 4px rgba(255,255,255,.75),
+    0 0 0 1px rgba(25,25,112,.10),
+    0 1px 3px rgba(0,0,0,.13);
+}
+
+/* 提案カードの使用数表示も読みやすくする */
+#patternViewSuggest .template-usage{
+  font-size:12px;
+  line-height:1.55;
+}
+
+/* iPad横向きで1列カードになった場合はプレビューをさらに少し高く */
+@media (min-width:768px) and (max-width:1180px) and (orientation:landscape){
+  #patternViewSuggest .template-mini-preview{
+    min-height:88px;
+  }
+}
+
+
+/* =========================================================
+   v11.3 Theme colors
+   ========================================================= */
+:root{
+  --theme-main:#66507A;
+  --theme-main-rgb:102,80,122;
+  --theme-soft:#F1ECF4;
+}
+
+html[data-theme="plum"]{
+  --theme-main:#66507A;
+  --theme-main-rgb:102,80,122;
+  --theme-soft:#F1ECF4;
+}
+html[data-theme="teal"]{
+  --theme-main:#2F6F6A;
+  --theme-main-rgb:47,111,106;
+  --theme-soft:#E8F2F1;
+}
+html[data-theme="rose"]{
+  --theme-main:#8A5A67;
+  --theme-main-rgb:138,90,103;
+  --theme-soft:#F5ECEF;
+}
+html[data-theme="navy"]{
+  --theme-main:#191970;
+  --theme-main-rgb:25,25,112;
+  --theme-soft:#EEEEF6;
+}
+
+#themeSelect{
+  min-width:92px;
+  max-width:130px;
+}
+
+header{
+  box-shadow:0 6px 20px rgba(var(--theme-main-rgb),.12);
+}
+
+.chip{
+  background:var(--theme-soft);
+}
+
 </style>
 </head>
 <body>
@@ -1054,13 +1157,20 @@ header p{font-size:calc(13px * var(--ui-scale))}
     <option value="1.10">110%</option>
     <option value="1.25">125%</option>
   </select>
+  <label for="themeSelect">テーマ</label>
+  <select id="themeSelect" title="UIテーマカラー">
+    <option value="plum">Plum</option>
+    <option value="teal">Teal</option>
+    <option value="rose">Rose</option>
+    <option value="navy">Navy</option>
+  </select>
 </div>
 <div class="wrap">
 
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v11.1.1</h1>
+      <h1>ビーズ設計スタジオ v11.3</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -2285,7 +2395,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
     const m=suggestionMaterials[key], bead=makeBead(m,0,"line");
     bead.classList.remove("design-item");bead.style.pointerEvents="none";bead.style.transform="scale(.65)";
     host.appendChild(bead);
-    const t=document.createElement("span");t.textContent=`${sizeName[m.size]}・${suggestionShapeName(m.shape)}・${m.color.toUpperCase()}`;host.appendChild(t);
+    const t=document.createElement("span");t.textContent=`${sizeName[m.size]}・${suggestionShapeName(m.shape)}・${m.color.toUpperCase()} / ${usageLabel(m.usage)}`;host.appendChild(t);
   }
 
   function usageWeight(v){return v==="high"?6:v==="medium"?3:1}
@@ -2335,15 +2445,49 @@ header p{font-size:calc(13px * var(--ui-scale))}
     box.textContent=`${sizeName[accentMaterial.size]}・${suggestionShapeName(accentMaterial.shape)}・${accentMaterial.color.toUpperCase()} / ${accentMaterial.count}個 / ${place}`;
   }
   function templatePreviewSequence(t){
-    if(t.type==="mirror"){
-      const seq=buildWeightedKeys(t.half||[]),left=[];
-      while(left.length<8)left.push(...seq);
-      const center=(t.center||[]).filter(k=>activeSuggestionKeys().includes(k));
-      return [...left.slice(0,8),...center,...left.slice(0,8).reverse()].slice(0,20);
+    const active=activeSuggestionKeys();
+    const maxPreview=22;
+
+    function ensureEveryActive(seq){
+      const out=[...seq];
+      const present=new Set(out);
+      active.forEach(k=>{
+        if(!present.has(k)) out.push(k);
+      });
+      return out;
     }
-    const seq=buildWeightedKeys(t.seq||[]),out=[];
-    while(out.length<20)out.push(...seq);
-    return out.slice(0,20);
+
+    if(t.type==="mirror"){
+      const weighted=buildWeightedKeys(t.half||[]);
+      const half=[];
+      while(half.length<9 && weighted.length) half.push(...weighted);
+      let left=half.slice(0,9);
+
+      // プレビューでは、使用対象の全種類が少なくとも1回は見えるよう補完する。
+      left=ensureEveryActive(left).slice(0,10);
+
+      const center=(t.center||[]).filter(k=>active.includes(k));
+      let seq=[...left,...center,...left.slice().reverse()];
+
+      // 中央指定に含まれない種類も視認できるよう最終保証。
+      seq=ensureEveryActive(seq);
+      return seq.slice(0,maxPreview);
+    }
+
+    const weighted=buildWeightedKeys(t.seq||[]);
+    let out=[];
+    while(out.length<maxPreview && weighted.length) out.push(...weighted);
+    out=ensureEveryActive(out.slice(0,maxPreview));
+
+    // 追加で末尾に押し込むと見切れやすいので、欠けた種類は中央寄りへ配置する。
+    active.forEach((k,idx)=>{
+      if(!out.slice(0,maxPreview).includes(k)){
+        const pos=Math.min(out.length, Math.floor((idx+1)*maxPreview/(active.length+1)));
+        out.splice(pos,0,k);
+      }
+    });
+
+    return out.slice(0,maxPreview);
   }
   function buildRepeatSuggestion(t,maxMm){
     const seq=buildWeightedKeys(t.seq||[]),out=[];let total=0,i=0,guard=0;
@@ -2905,7 +3049,7 @@ header p{font-size:calc(13px * var(--ui-scale))}
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"11.1",
+      app:"beads-design-studio",version:"11.3",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
@@ -3114,6 +3258,40 @@ header p{font-size:calc(13px * var(--ui-scale))}
 
   apply(select.value);
   select.addEventListener("change",()=>apply(select.value));
+})();
+</script>
+
+
+<script>
+(function(){
+  const select=document.getElementById("themeSelect");
+  if(!select)return;
+
+  const KEY="beadsDesignStudio_theme";
+  const THEMES=["plum","teal","rose","navy"];
+  const COLORS={
+    plum:"#66507A",
+    teal:"#2F6F6A",
+    rose:"#8A5A67",
+    navy:"#191970"
+  };
+
+  function applyTheme(theme){
+    const v=THEMES.includes(theme)?theme:"plum";
+    document.documentElement.dataset.theme=v;
+    document.documentElement.style.setProperty("--sub",COLORS[v]);
+    try{localStorage.setItem(KEY,v)}catch(e){}
+    select.value=v;
+  }
+
+  let saved="plum";
+  try{
+    const s=localStorage.getItem(KEY);
+    if(THEMES.includes(s))saved=s;
+  }catch(e){}
+
+  applyTheme(saved);
+  select.addEventListener("change",()=>applyTheme(select.value));
 })();
 </script>
 
