@@ -1,0 +1,2546 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>レース展開アニメーション｜JRAスクショ読込対応</title>
+<style>
+:root{
+  --bg:#07110b;
+  --grass1:#13381f;
+  --grass2:#0d2418;
+  --track:#b99055;
+  --rail:#f4f4e8;
+  --text:#f5f7fb;
+  --muted:#b8c2cf;
+  --gold:#d8b968;
+  --blue:#3aa7ff;
+  --red:#ff5757;
+  --green:#64e18b;
+  --orange:#ffb14a;
+  --purple:#b48cff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05080d;color:var(--text);font-family:"Meiryo UI","Meiryo","Yu Gothic",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+#app{position:relative;width:100vw;height:100vh;min-height:650px;overflow:hidden;background:
+  radial-gradient(circle at 50% 15%, rgba(91,150,91,.22), transparent 28%),
+  radial-gradient(circle at 75% 65%, rgba(216,185,104,.10), transparent 26%),
+  linear-gradient(135deg,#07110b 0%,#102817 48%,#05080d 100%)}
+#app:before{
+  content:"";position:absolute;inset:-20%;opacity:.34;filter:blur(2px);
+  background:radial-gradient(circle at 25% 30%,rgba(255,255,255,.12),transparent 18%),
+             radial-gradient(circle at 70% 50%,rgba(255,255,255,.07),transparent 18%),
+             repeating-linear-gradient(110deg,transparent 0 58px,rgba(255,255,255,.03) 59px 60px);
+  animation:fog 25s linear infinite;
+}
+@keyframes fog{from{transform:translate(-2%,0)}to{transform:translate(4%,-2%)}}
+
+.topbar{position:absolute;z-index:40;top:16px;left:22px;right:22px;display:flex;justify-content:space-between;gap:14px;pointer-events:none;text-shadow:0 3px 15px #000}
+.title{border-left:5px solid var(--gold);background:rgba(5,8,13,.48);backdrop-filter:blur(6px);padding:10px 14px;border-radius:0 14px 14px 0;max-width:620px;animation:fadeTitle 8s ease forwards}
+.title h1{font-size:26px;margin:0;letter-spacing:.06em;font-weight:900}
+.title .sub{font-size:12px;color:#dbe3ef;margin-top:5px;line-height:1.4}
+.clock{height:max-content;border:1px solid rgba(216,185,104,.35);background:rgba(5,8,13,.48);backdrop-filter:blur(6px);border-radius:999px;padding:9px 13px;color:#f1d78c;font-weight:800;font-size:14px;animation:fadeTitle 8s ease forwards}
+@keyframes fadeTitle{0%,45%{opacity:.95}100%{opacity:.38}}
+
+.scene{position:absolute;z-index:5;inset:94px 32px 154px 32px;perspective:900px}
+.track3d{position:absolute;inset:0;transform:rotateX(56deg) rotateZ(-5deg) scale(.96);transform-origin:center center;border-radius:28px;background:
+  linear-gradient(rgba(255,255,255,.04),rgba(0,0,0,.18)),
+  repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 72px),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 1px,transparent 1px 72px),
+  radial-gradient(ellipse at 50% 50%,#164321 0 37%,transparent 37%),
+  linear-gradient(135deg,#10331c,#08160f 70%,#05080d);
+  box-shadow:inset 0 0 100px rgba(0,0,0,.48),0 38px 120px rgba(0,0,0,.6);
+  border:1px solid rgba(255,255,255,.12)}
+canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:28px}
+.hud{position:absolute;z-index:35;right:34px;top:104px;width:300px;border:1px solid rgba(255,255,255,.14);background:rgba(5,8,13,.58);backdrop-filter:blur(8px);border-radius:16px;padding:13px 15px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+.hud-title{color:#f1d78c;font-size:13px;font-weight:900;letter-spacing:.08em;margin-bottom:8px}
+.hud-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#dce4ef;border-top:1px solid rgba(255,255,255,.08);padding-top:7px;margin-top:7px}
+.hud-row b{color:#fff}
+.phasebar{height:8px;background:rgba(255,255,255,.10);border-radius:999px;overflow:hidden;margin-top:10px}
+.phasebar span{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--gold),var(--orange));animation:bar 44s linear forwards}
+@keyframes bar{to{width:100%}}
+
+.ranking{position:absolute;z-index:35;left:34px;top:104px;width:320px;border:1px solid rgba(255,255,255,.14);background:rgba(5,8,13,.58);backdrop-filter:blur(8px);border-radius:16px;padding:13px 15px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+.rank-title{color:#f1d78c;font-size:13px;font-weight:900;letter-spacing:.08em;margin-bottom:8px}
+.rank-list{display:grid;gap:6px}
+.rank-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#e8eef7;white-space:nowrap}
+.rank-no{width:22px;text-align:center;color:#07110b;background:#f1d78c;border-radius:999px;font-weight:900}
+.silk{width:12px;height:12px;border-radius:3px;box-shadow:0 0 10px rgba(255,255,255,.2)}
+
+.callout{position:absolute;z-index:34;left:50%;top:50%;transform:translate(-50%,-50%);padding:16px 26px;border-radius:16px;background:rgba(5,8,13,.78);border:1px solid rgba(216,185,104,.38);box-shadow:0 0 60px rgba(216,185,104,.22);font-weight:900;font-size:28px;letter-spacing:.08em;text-shadow:0 3px 14px #000;opacity:0;animation:callouts 44s linear forwards}
+@keyframes callouts{
+  0%,7%{opacity:0}
+  8%,13%{opacity:1}
+  14%,30%{opacity:0}
+  31%,36%{opacity:1}
+  37%,57%{opacity:0}
+  58%,64%{opacity:1}
+  65%,79%{opacity:0}
+  80%,97%{opacity:1}
+  98%,100%{opacity:.92}
+}
+  8%,13%{opacity:1}
+  14%,30%{opacity:0}
+  31%,36%{opacity:1}
+  37%,58%{opacity:0}
+  59%,64%{opacity:1}
+  65%,82%{opacity:0}
+  83%,89%{opacity:1}
+  90%,100%{opacity:0}
+}
+
+.lower{position:absolute;z-index:45;left:42px;right:42px;bottom:26px;background:rgba(5,8,13,.82);border:1px solid rgba(255,255,255,.13);backdrop-filter:blur(7px);border-radius:18px;padding:15px 20px 16px;box-shadow:0 22px 70px rgba(0,0,0,.55)}
+.lower:before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:6px;background:var(--gold);border-radius:0 4px 4px 0}
+.chapter{color:#f1d78c;font-size:16px;font-weight:900;letter-spacing:.08em;margin-bottom:6px}
+.caption{font-size:18px;line-height:1.48;min-height:54px}
+.caption span{display:none}.caption span.active{display:inline}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chip{padding:6px 11px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10);font-size:12px;color:#d6dde8}
+.chip.active{background:rgba(216,185,104,.24);border-color:rgba(216,185,104,.42);color:#f8e5a8}
+.replay{position:absolute;z-index:60;right:34px;bottom:34px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.08);color:white;border-radius:999px;padding:10px 16px;font-size:14px;cursor:pointer;backdrop-filter:blur(7px)}
+.replay:hover{background:rgba(255,255,255,.16)}
+.note{position:absolute;z-index:30;left:50%;top:88px;transform:translateX(-50%);font-size:11px;color:rgba(230,236,246,.72);background:rgba(5,8,13,.42);padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(5px)}
+
+/* iPhone responsive */
+@media (max-width:932px) and (orientation:landscape){
+  #app{min-height:520px}.topbar{top:8px;left:10px;right:10px}.title{padding:7px 10px;max-width:440px}.title h1{font-size:17px}.title .sub{font-size:9px}.clock{font-size:10px;padding:6px 9px}
+  .note{display:none}.scene{inset:58px 10px 96px 10px}.track3d{transform:rotateX(54deg) rotateZ(-5deg) scale(.98)}
+  .hud{right:12px;top:64px;width:220px;padding:9px 10px}.ranking{left:12px;top:64px;width:240px;padding:9px 10px}
+  .hud-title,.rank-title{font-size:10px}.hud-row,.rank-item{font-size:9px}.rank-list{gap:4px}
+  .callout{font-size:18px;padding:12px 18px}
+  .lower{left:10px;right:10px;bottom:10px;padding:9px 12px 10px;border-radius:12px}.chapter{font-size:12px}.caption{font-size:12px;line-height:1.35;min-height:34px}.chip{font-size:9px;padding:4px 7px}
+  .replay{right:10px;bottom:10px;font-size:10px;padding:7px 10px;opacity:.65}
+}
+@media (max-width:600px) and (orientation:portrait){
+  #app{height:100svh;min-height:650px}.topbar{top:10px;left:10px;right:10px;display:block}.title{max-width:calc(100vw - 20px);padding:7px 9px;border-left-width:3px;border-radius:0 10px 10px 0;opacity:.78}.title h1{font-size:15px;line-height:1.15}.title .sub{font-size:8.5px;line-height:1.25}.clock{position:absolute;right:0;top:50px;font-size:9px;padding:5px 8px}
+  .note{display:none}.scene{inset:104px 4px 214px 4px;perspective:720px}.track3d{transform:rotateX(48deg) rotateZ(-4deg) scale(.92);border-radius:20px}canvas{border-radius:20px}
+  .hud{display:none}.ranking{left:8px;right:8px;top:auto;bottom:146px;width:auto;padding:8px 10px;border-radius:12px;opacity:.78}.rank-title{font-size:10px;margin-bottom:5px}.rank-list{grid-template-columns:1fr 1fr;gap:4px 8px}.rank-item{font-size:8.5px;gap:5px}.rank-no{width:18px}.silk{width:9px;height:9px}
+  .callout{width:calc(100vw - 34px);text-align:center;font-size:15px;padding:10px 12px;border-radius:12px}
+  .lower{left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));padding:9px 10px 10px;border-radius:12px}.lower:before{top:12px;bottom:12px;width:4px}.chapter{font-size:11px;margin-bottom:4px}.caption{font-size:11px;line-height:1.36;min-height:46px}.chips{margin-top:7px;gap:5px}.chip{font-size:8.5px;padding:4px 6px}
+  .replay{right:max(8px,env(safe-area-inset-right));bottom:calc(max(8px,env(safe-area-inset-bottom)) + 2px);font-size:0;width:34px;height:34px;padding:0;border-radius:50%;opacity:.52}.replay:after{content:"↻";font-size:18px;line-height:34px}
+}
+@media (max-width:380px) and (orientation:portrait){
+  #app{min-height:620px}.scene{inset:100px 2px 204px 2px}.track3d{transform:rotateX(46deg) rotateZ(-4deg) scale(.90)}.title h1{font-size:14px}.title .sub{font-size:8px}.ranking{display:none}.caption{font-size:10px;min-height:44px}.chip{font-size:8px;padding:3px 5px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+
+.results-panel{
+  position:absolute;z-index:36;left:50%;top:138px;transform:translateX(-50%);
+  width:420px;opacity:0;
+  border:1px solid rgba(255,255,255,.16);background:rgba(5,8,13,.68);backdrop-filter:blur(8px);
+  border-radius:18px;padding:14px 16px;box-shadow:0 18px 60px rgba(0,0,0,.45);
+  opacity:0; transform:translateX(-50%) translateY(10px) scale(.98);
+  transition:opacity .45s ease, transform .45s ease;
+}
+.results-panel.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+.results-title{color:#f1d78c;font-size:14px;font-weight:900;letter-spacing:.08em}
+.results-sub{font-size:11px;color:#cfd7e1;margin-top:4px;margin-bottom:10px}
+.results-list{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.result-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#fff}
+.result-rank{width:22px;text-align:center;color:#07110b;background:#f1d78c;border-radius:999px;font-weight:900}
+.result-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  80%,100%{opacity:1}
+}
+@media (max-width:932px) and (orientation:landscape){
+  .results-panel{top:62px;width:300px;padding:9px 10px;border-radius:12px}
+  .results-title{font-size:11px}.results-sub{font-size:9px}.results-item{font-size:9px}
+  .results-list{gap:4px 8px}
+}
+@media (max-width:600px) and (orientation:portrait){
+  .results-panel{
+    top:auto;bottom:144px;left:8px;right:8px;transform:none;width:auto;padding:8px 10px;border-radius:12px;
+  }
+  .results-title{font-size:10px}.results-sub{font-size:8px;margin-bottom:7px}
+  .results-list{grid-template-columns:1fr 1fr;gap:4px 8px}
+  .result-item{font-size:8.5px;gap:5px}
+  .result-rank{width:18px}
+}
+@media (max-width:380px) and (orientation:portrait){
+  .results-panel{bottom:140px}
+  .results-list{grid-template-columns:1fr}
+}
+
+
+.coursebox{
+  position:absolute;z-index:35;left:50%;top:104px;transform:translateX(-50%);
+  width:420px;border:1px solid rgba(255,255,255,.14);background:rgba(5,8,13,.58);
+  backdrop-filter:blur(8px);border-radius:16px;padding:12px 15px;box-shadow:0 18px 60px rgba(0,0,0,.45);
+}
+.coursebox-title{color:#f1d78c;font-size:13px;font-weight:900;letter-spacing:.08em;margin-bottom:8px}
+.coursebox-list{display:grid;gap:5px;font-size:11px;color:#e2e9f3;line-height:1.35}
+.coursebox-list b{color:#fff2b2}
+@media (max-width:932px) and (orientation:landscape){
+  .coursebox{top:62px;width:310px;padding:9px 10px;border-radius:12px}
+  .coursebox-title{font-size:10px}
+  .coursebox-list{font-size:8.5px;gap:4px}
+}
+@media (max-width:600px) and (orientation:portrait){
+  .coursebox{
+    left:8px;right:8px;top:104px;transform:none;width:auto;
+    padding:8px 10px;border-radius:12px;opacity:.82;
+  }
+  .coursebox-title{font-size:10px;margin-bottom:5px}
+  .coursebox-list{font-size:8px;gap:3px;line-height:1.3}
+  .scene{inset:166px 4px 214px 4px !important;}
+}
+@media (max-width:380px) and (orientation:portrait){
+  .coursebox{top:98px}
+  .coursebox-list{font-size:7.6px}
+  .scene{inset:160px 2px 204px 2px !important;}
+}
+
+
+.zoom-panel{
+  position:absolute;z-index:37;right:34px;bottom:154px;width:430px;height:232px;
+  border:1px solid rgba(255,255,255,.16);background:rgba(5,8,13,.72);backdrop-filter:blur(8px);
+  border-radius:18px;padding:12px 12px 10px;box-shadow:0 18px 60px rgba(0,0,0,.45);
+  opacity:0;transform:translateY(14px) scale(.98);transition:opacity .45s ease,transform .45s ease;
+}
+.zoom-panel.show{opacity:1;transform:translateY(0) scale(1)}
+.zoom-title{color:#f1d78c;font-size:13px;font-weight:900;letter-spacing:.08em}
+.zoom-sub{font-size:11px;color:#d8e1ec;margin-top:4px;margin-bottom:8px}
+#zoomRace{width:100%;height:186px;border-radius:12px;background:
+  linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.08)),
+  linear-gradient(180deg,#58744a 0 18%, #8b6b3f 18% 58%, #42643a 58% 100%);
+  display:block;
+}
+@media (max-width:932px) and (orientation:landscape){
+  .zoom-panel{right:12px;bottom:96px;width:290px;height:164px;padding:8px 8px 7px;border-radius:12px}
+  .zoom-title{font-size:10px}.zoom-sub{font-size:8px;margin-bottom:5px} #zoomRace{height:126px;border-radius:10px}
+  .results-panel{top:62px}
+}
+@media (max-width:600px) and (orientation:portrait){
+  .zoom-panel{
+    left:8px;right:8px;bottom:278px;width:auto;height:146px;padding:8px 8px 7px;border-radius:12px;
+  }
+  .zoom-title{font-size:10px}.zoom-sub{font-size:8px;margin-bottom:5px} #zoomRace{height:104px;border-radius:10px}
+  .results-panel{bottom:146px;top:auto;left:8px;right:8px;transform:none;width:auto}
+  .results-panel.show{transform:none}
+}
+@media (max-width:380px) and (orientation:portrait){
+  .zoom-panel{bottom:264px;height:134px}
+  #zoomRace{height:92px}
+}
+
+
+/* ===== START ROSTER SCREEN ===== */
+.intro-screen{
+  position:absolute; inset:0; z-index:1000;
+  display:flex; align-items:center; justify-content:center;
+  padding:24px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(216,185,104,.18), transparent 30%),
+    linear-gradient(135deg, rgba(5,8,13,.98), rgba(11,31,19,.98));
+  transition:opacity .45s ease, visibility .45s ease;
+}
+.intro-screen.hide{opacity:0;visibility:hidden;pointer-events:none}
+.intro-card{
+  width:min(1120px,96vw); max-height:92vh; overflow:auto;
+  border:1px solid rgba(216,185,104,.38);
+  background:rgba(5,8,13,.78);
+  backdrop-filter:blur(10px);
+  border-radius:22px;
+  box-shadow:0 28px 100px rgba(0,0,0,.62);
+  padding:22px 24px 20px;
+}
+.intro-kicker{
+  color:#f1d78c; font-size:12px; font-weight:900;
+  letter-spacing:.18em; text-align:center;
+}
+.intro-title{
+  margin:6px 0 4px; text-align:center;
+  font-size:30px; font-weight:900; letter-spacing:.06em;
+}
+.intro-sub{
+  text-align:center; color:#cfd7e1; font-size:13px; margin-bottom:18px;
+}
+.roster-grid{
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px 12px;
+}
+.roster-item{
+  display:grid; grid-template-columns:34px 1fr auto;
+  align-items:center; gap:9px;
+  min-height:48px; padding:7px 10px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.055);
+  border-radius:12px;
+}
+.roster-no{
+  width:28px; height:28px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:900; color:#07110b; background:#f1d78c;
+}
+.roster-horse{font-size:14px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.roster-jockey{font-size:12px; color:#cfd7e1; white-space:nowrap}
+.intro-actions{display:flex; justify-content:center; margin-top:18px}
+.start-race{
+  appearance:none; border:1px solid rgba(216,185,104,.65);
+  background:linear-gradient(180deg,#e5c976,#b99a4d);
+  color:#07110b; font-weight:900; font-size:16px;
+  padding:12px 28px; border-radius:999px; cursor:pointer;
+  box-shadow:0 10px 34px rgba(216,185,104,.22);
+}
+.start-race:hover{filter:brightness(1.06)}
+.start-race:active{transform:translateY(1px)}
+@media (max-width:900px){
+  .intro-card{padding:16px}
+  .intro-title{font-size:22px}
+  .roster-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width:600px){
+  .intro-screen{padding:8px}
+  .intro-card{width:100%;max-height:96vh;padding:12px 10px}
+  .intro-kicker{font-size:9px}
+  .intro-title{font-size:18px}
+  .intro-sub{font-size:10px;margin-bottom:10px}
+  .roster-grid{grid-template-columns:1fr 1fr;gap:5px 6px}
+  .roster-item{grid-template-columns:24px 1fr;gap:6px;min-height:40px;padding:5px 6px}
+  .roster-no{width:22px;height:22px;border-radius:6px;font-size:11px}
+  .roster-horse{font-size:10px}
+  .roster-jockey{grid-column:2;font-size:8.5px;margin-top:-3px}
+  .intro-actions{margin-top:10px}
+  .start-race{font-size:12px;padding:9px 20px}
+}
+@media (max-width:390px){
+  .roster-grid{grid-template-columns:1fr}
+  .roster-item{grid-template-columns:24px 1fr auto}
+  .roster-jockey{grid-column:auto;margin-top:0}
+}
+
+
+/* ===== COMPACT LANDSCAPE LAYOUT FIX ===== */
+@media (max-width:932px) and (orientation:landscape) and (max-height:520px){
+  html,body{height:100%;overflow:hidden}
+  #app{height:100svh;min-height:0}
+
+  .topbar{
+    top:5px;left:8px;right:8px;
+    align-items:flex-start;
+  }
+  .title{
+    max-width:360px;
+    padding:5px 8px;
+    border-left-width:3px;
+    border-radius:0 9px 9px 0;
+  }
+  .title h1{font-size:13px;line-height:1.1}
+  .title .sub{display:none}
+  .clock{display:none}
+  .note{display:none}
+
+  .ranking{
+    left:8px;top:38px;width:246px;
+    padding:7px 9px;
+    border-radius:11px;
+  }
+  .rank-title{font-size:9px;margin-bottom:4px}
+  .rank-list{gap:3px}
+  .rank-item{font-size:8px;gap:5px;line-height:1.05}
+  .rank-no{width:18px;font-size:8px}
+  .silk{width:8px;height:8px}
+
+  .coursebox{
+    left:auto;right:8px;top:38px;
+    transform:none;
+    width:390px;
+    padding:7px 9px;
+    border-radius:11px;
+  }
+  .coursebox-title{font-size:9px;margin-bottom:4px}
+  .coursebox-list{
+    grid-template-columns:1fr 1fr;
+    column-gap:12px;
+    row-gap:2px;
+    font-size:7.5px;
+    line-height:1.15;
+  }
+
+  .hud{display:none}
+
+  .scene{
+    inset:72px 8px 88px 8px;
+  }
+  .track3d{
+    transform:rotateX(53deg) rotateZ(-5deg) scale(.97);
+  }
+
+  .lower{
+    left:8px;right:8px;bottom:6px;
+    padding:6px 10px 7px;
+    border-radius:10px;
+    min-height:0;
+  }
+  .lower:before{top:8px;bottom:8px;width:3px}
+  .chapter{font-size:10px;margin-bottom:2px;line-height:1.15}
+  .caption{
+    font-size:9px;
+    line-height:1.22;
+    min-height:22px;
+    max-height:34px;
+    overflow:hidden;
+  }
+  .chips{
+    margin-top:4px;
+    gap:4px;
+    flex-wrap:nowrap;
+    overflow:hidden;
+  }
+  .chip{
+    font-size:7px;
+    padding:2px 5px;
+    white-space:nowrap;
+  }
+
+  .callout{
+    font-size:13px;
+    padding:8px 12px;
+    max-width:55vw;
+    text-align:center;
+  }
+
+  .replay{
+    right:8px;bottom:7px;
+    font-size:0;
+    width:28px;height:28px;padding:0;
+    border-radius:50%;
+    opacity:.55;
+  }
+  .replay:after{
+    content:"↻";
+    font-size:15px;
+    line-height:28px;
+  }
+
+  .results-panel{
+    top:38px;
+    width:280px;
+    padding:7px 8px;
+  }
+  .results-title{font-size:9px}
+  .results-sub{font-size:7px;margin:2px 0 5px}
+  .result-item{font-size:7.5px}
+
+  .zoom-panel{
+    right:8px;
+    bottom:88px;
+    width:265px;
+    height:132px;
+    padding:6px;
+  }
+  .zoom-title{font-size:8px}
+  .zoom-sub{font-size:7px;margin:2px 0 4px}
+  #zoomRace{height:98px}
+}
+
+@media (max-width:700px) and (orientation:landscape) and (max-height:520px){
+  .coursebox{width:330px}
+  .coursebox-list{font-size:6.9px;column-gap:8px}
+  .ranking{width:220px}
+}
+
+
+/* ===== TEXT LEGIBILITY / BOTTOM INFORMATION AREA FIX ===== */
+.lower{
+  background:rgba(4,10,8,.96) !important;
+  border-color:rgba(216,185,104,.30) !important;
+  backdrop-filter:none !important;
+}
+.chapter,
+.caption{
+  text-shadow:0 2px 4px rgba(0,0,0,.95);
+}
+.callout{
+  background:rgba(4,8,10,.96) !important;
+  backdrop-filter:none !important;
+}
+
+/* 横長・低い画面では説明欄を赤枠相当の下部空き領域へ固定 */
+@media (max-width:932px) and (orientation:landscape) and (max-height:520px){
+  .scene{
+    inset:72px 8px 154px 8px !important;
+  }
+
+  .lower{
+    left:8px !important;
+    right:300px !important;
+    bottom:8px !important;
+    height:112px !important;
+    padding:10px 14px 10px 16px !important;
+    border-radius:12px !important;
+    overflow:hidden !important;
+    z-index:48 !important;
+  }
+
+  .chapter{
+    font-size:14px !important;
+    line-height:1.2 !important;
+    margin-bottom:7px !important;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .caption{
+    font-size:11px !important;
+    line-height:1.45 !important;
+    min-height:0 !important;
+    max-height:48px !important;
+    overflow:hidden !important;
+  }
+
+  .chips{
+    margin-top:8px !important;
+    gap:5px !important;
+  }
+
+  .chip{
+    font-size:8px !important;
+    padding:3px 7px !important;
+  }
+
+  .zoom-panel{
+    right:8px !important;
+    bottom:8px !important;
+    width:280px !important;
+    height:112px !important;
+    padding:7px !important;
+    z-index:49 !important;
+  }
+
+  .zoom-title{font-size:9px !important}
+  .zoom-sub{font-size:7px !important;margin:2px 0 4px !important}
+  #zoomRace{height:78px !important}
+
+  .callout{
+    top:52% !important;
+    max-width:48vw !important;
+    font-size:14px !important;
+    padding:9px 14px !important;
+  }
+
+  .results-panel{
+    top:38px !important;
+  }
+}
+
+/* さらに横幅が狭い場合はズームを小さくし、説明欄を広げる */
+@media (max-width:700px) and (orientation:landscape) and (max-height:520px){
+  .lower{
+    right:232px !important;
+  }
+  .zoom-panel{
+    width:224px !important;
+  }
+}
+
+
+/* ===== FORCE ACT DESCRIPTION TO BOTTOM ON WIDE / LOW SCREENS ===== */
+@media (orientation:landscape) and (max-height:620px){
+  .lower{
+    position:absolute !important;
+    top:auto !important;
+    left:12px !important;
+    right:470px !important;
+    bottom:12px !important;
+    width:auto !important;
+    height:118px !important;
+    min-height:118px !important;
+    max-height:118px !important;
+    margin:0 !important;
+    padding:12px 16px 12px 18px !important;
+    overflow:hidden !important;
+    background:#06100b !important;
+    border:1px solid rgba(216,185,104,.38) !important;
+    border-radius:14px !important;
+    z-index:70 !important;
+    backdrop-filter:none !important;
+    box-shadow:0 16px 42px rgba(0,0,0,.58) !important;
+  }
+
+  .lower .chapter{
+    display:block !important;
+    position:static !important;
+    margin:0 0 7px 0 !important;
+    padding:0 !important;
+    color:#f1d78c !important;
+    font-size:15px !important;
+    line-height:1.2 !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+
+  .lower .caption{
+    display:block !important;
+    position:static !important;
+    margin:0 !important;
+    padding:0 !important;
+    min-height:0 !important;
+    max-height:48px !important;
+    color:#f5f7fb !important;
+    font-size:11px !important;
+    line-height:1.42 !important;
+    overflow:hidden !important;
+  }
+
+  .lower .chips{
+    display:flex !important;
+    position:static !important;
+    margin-top:8px !important;
+    gap:5px !important;
+    flex-wrap:nowrap !important;
+    overflow:hidden !important;
+  }
+
+  .lower .chip{
+    font-size:8px !important;
+    padding:3px 7px !important;
+    white-space:nowrap !important;
+  }
+
+  .zoom-panel{
+    right:12px !important;
+    bottom:12px !important;
+    width:440px !important;
+    height:118px !important;
+    z-index:71 !important;
+  }
+
+  .zoom-title{font-size:10px !important}
+  .zoom-sub{font-size:8px !important;margin:2px 0 5px !important}
+  #zoomRace{height:82px !important}
+
+  .scene{
+    bottom:150px !important;
+  }
+}
+
+/* 画面幅が狭い横向き端末 */
+@media (max-width:900px) and (orientation:landscape) and (max-height:620px){
+  .lower{
+    right:292px !important;
+    height:108px !important;
+    min-height:108px !important;
+    max-height:108px !important;
+  }
+  .zoom-panel{
+    width:270px !important;
+    height:108px !important;
+  }
+  #zoomRace{height:72px !important}
+}
+
+
+/* ===== MOVE LEFT/CENTER INFORMATION WINDOWS TO LOWER EMPTY AREA ===== */
+/* PC・横長画面：LIVE POSITION と COURSE OVERVIEW をコース下へ移動 */
+@media (min-width:933px) and (orientation:landscape){
+  .ranking{
+    top:auto !important;
+    bottom:24px !important;
+    left:28px !important;
+    width:400px !important;
+    z-index:62 !important;
+    background:rgba(4,10,8,.96) !important;
+    backdrop-filter:none !important;
+  }
+
+  .coursebox{
+    top:auto !important;
+    bottom:24px !important;
+    left:50% !important;
+    right:auto !important;
+    transform:translateX(-50%) !important;
+    width:525px !important;
+    z-index:62 !important;
+    background:rgba(4,10,8,.96) !important;
+    backdrop-filter:none !important;
+  }
+
+  /* 下部ウインドウ用の空間を確保 */
+  .scene{
+    bottom:230px !important;
+  }
+
+  /* 幕の説明は上部の帯ではなく、下部ウインドウのさらに上に配置 */
+  .lower{
+    top:auto !important;
+    left:455px !important;
+    right:455px !important;
+    bottom:184px !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    padding:9px 14px 10px !important;
+    background:rgba(4,10,8,.97) !important;
+    backdrop-filter:none !important;
+    z-index:64 !important;
+  }
+
+  .lower .chapter{
+    font-size:14px !important;
+    margin-bottom:5px !important;
+  }
+
+  .lower .caption{
+    font-size:11px !important;
+    line-height:1.35 !important;
+    max-height:44px !important;
+  }
+
+  .lower .chips{
+    margin-top:6px !important;
+  }
+
+  .zoom-panel{
+    right:24px !important;
+    bottom:24px !important;
+    width:420px !important;
+    height:180px !important;
+    z-index:63 !important;
+  }
+
+  #zoomRace{
+    height:136px !important;
+  }
+}
+
+/* 幅がやや狭い横長画面 */
+@media (min-width:933px) and (max-width:1400px) and (orientation:landscape){
+  .ranking{
+    width:330px !important;
+  }
+
+  .coursebox{
+    width:430px !important;
+  }
+
+  .lower{
+    left:355px !important;
+    right:365px !important;
+  }
+
+  .zoom-panel{
+    width:340px !important;
+  }
+}
+
+
+/* ===== MOVE MAIN RACE TITLE AWAY FROM ACT DESCRIPTION ===== */
+@media (orientation:landscape){
+  .topbar{
+    top:72px !important;
+    left:22px !important;
+    right:22px !important;
+    align-items:flex-start !important;
+  }
+
+  .title{
+    max-width:620px !important;
+    background:rgba(5,8,13,.94) !important;
+    backdrop-filter:none !important;
+  }
+
+  .title h1{
+    font-size:24px !important;
+    line-height:1.15 !important;
+  }
+
+  .title .sub{
+    font-size:11px !important;
+  }
+
+  .clock{
+    margin-top:0 !important;
+    background:rgba(5,8,13,.94) !important;
+    backdrop-filter:none !important;
+  }
+
+  .note{
+    top:126px !important;
+  }
+}
+
+/* 高さの低い横長画面ではさらに小型化 */
+@media (orientation:landscape) and (max-height:620px){
+  .topbar{
+    top:58px !important;
+    left:28px !important;
+    right:18px !important;
+  }
+
+  .title{
+    max-width:430px !important;
+    padding:7px 10px !important;
+  }
+
+  .title h1{
+    font-size:18px !important;
+  }
+
+  .title .sub{
+    font-size:9px !important;
+    line-height:1.25 !important;
+  }
+
+  .clock{
+    font-size:11px !important;
+    padding:7px 10px !important;
+  }
+
+  .note{
+    top:106px !important;
+  }
+}
+
+
+/* ===== PLACE MAIN RACE TITLE AT UPPER RIGHT ===== */
+@media (orientation:landscape){
+  .topbar{
+    top:14px !important;
+    left:auto !important;
+    right:18px !important;
+    width:auto !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:flex-end !important;
+    gap:7px !important;
+    z-index:80 !important;
+  }
+
+  .title{
+    width:430px !important;
+    max-width:430px !important;
+    padding:9px 13px !important;
+    border-left:0 !important;
+    border-right:5px solid var(--gold) !important;
+    border-radius:14px 0 0 14px !important;
+    background:rgba(5,8,13,.96) !important;
+    text-align:right !important;
+    backdrop-filter:none !important;
+  }
+
+  .title h1{
+    font-size:22px !important;
+    line-height:1.15 !important;
+    margin:0 !important;
+  }
+
+  .title .sub{
+    font-size:10px !important;
+    line-height:1.3 !important;
+    margin-top:4px !important;
+  }
+
+  .clock{
+    position:static !important;
+    margin:0 !important;
+    align-self:flex-end !important;
+    background:rgba(5,8,13,.96) !important;
+    backdrop-filter:none !important;
+    font-size:11px !important;
+    padding:7px 11px !important;
+  }
+
+  .note{
+    top:92px !important;
+    left:50% !important;
+    max-width:calc(100vw - 520px) !important;
+  }
+}
+
+/* 高さの低い横長画面では、右上タイトルをさらに小型化 */
+@media (orientation:landscape) and (max-height:620px){
+  .topbar{
+    top:8px !important;
+    right:10px !important;
+    gap:4px !important;
+  }
+
+  .title{
+    width:340px !important;
+    max-width:340px !important;
+    padding:6px 10px !important;
+    border-right-width:3px !important;
+  }
+
+  .title h1{
+    font-size:16px !important;
+  }
+
+  .title .sub{
+    font-size:8px !important;
+    line-height:1.2 !important;
+  }
+
+  .clock{
+    font-size:9px !important;
+    padding:5px 8px !important;
+  }
+
+  .note{
+    top:66px !important;
+    max-width:calc(100vw - 390px) !important;
+  }
+}
+
+
+
+/* ===== MOBILE / iPHONE FINAL OVERRIDES ===== */
+html, body{
+  width:100%;
+  min-height:100%;
+  overscroll-behavior:none;
+  touch-action:manipulation;
+}
+#app{
+  height:100vh;
+  height:100svh;
+  height:100dvh;
+}
+button, .start-race{
+  -webkit-tap-highlight-color:transparent;
+}
+@supports (padding:max(0px)){
+  #app{
+    padding-left:env(safe-area-inset-left);
+    padding-right:env(safe-area-inset-right);
+  }
+}
+
+/* iPhone縦持ち：情報量を絞り、コースと実況を最優先 */
+@media (max-width: 768px) and (orientation: portrait){
+  html, body{overflow:hidden !important;background:#05080d !important;}
+  #app{
+    min-height:0 !important;
+    height:100svh !important;
+    height:100dvh !important;
+    overflow:hidden !important;
+  }
+  .topbar{
+    top:max(6px, env(safe-area-inset-top)) !important;
+    left:8px !important;
+    right:8px !important;
+    width:auto !important;
+    display:block !important;
+    z-index:90 !important;
+  }
+  .title{
+    width:auto !important;
+    max-width:none !important;
+    padding:7px 9px !important;
+    text-align:left !important;
+    border-left:3px solid var(--gold) !important;
+    border-right:0 !important;
+    border-radius:0 10px 10px 0 !important;
+    background:rgba(5,8,13,.96) !important;
+    opacity:1 !important;
+  }
+  .title h1{font-size:15px !important;line-height:1.12 !important;}
+  .title .sub{font-size:8px !important;line-height:1.25 !important;margin-top:3px !important;}
+  .clock,.hud,.note,.coursebox,.zoom-panel{display:none !important;}
+
+  .scene{
+    top:78px !important;
+    left:4px !important;
+    right:4px !important;
+    bottom:232px !important;
+    inset:78px 4px 232px 4px !important;
+    perspective:640px !important;
+    z-index:5 !important;
+  }
+  .track3d{
+    transform:rotateX(47deg) rotateZ(-4deg) scale(.94) !important;
+    border-radius:18px !important;
+  }
+  canvas{border-radius:18px !important;}
+
+  .ranking{
+    display:block !important;
+    left:8px !important;
+    right:8px !important;
+    top:auto !important;
+    bottom:148px !important;
+    width:auto !important;
+    padding:7px 9px !important;
+    border-radius:12px !important;
+    opacity:.94 !important;
+    background:rgba(4,10,8,.94) !important;
+    backdrop-filter:none !important;
+    z-index:55 !important;
+  }
+  .rank-title{font-size:9px !important;margin-bottom:4px !important;}
+  .rank-list{display:grid !important;grid-template-columns:1fr 1fr !important;gap:3px 7px !important;}
+  .rank-item{font-size:8.5px !important;gap:5px !important;min-width:0 !important;overflow:hidden !important;}
+  .rank-no{width:17px !important;font-size:8px !important;}
+  .silk{width:8px !important;height:8px !important;flex:0 0 auto !important;}
+
+  .lower{
+    left:8px !important;
+    right:8px !important;
+    bottom:max(8px, env(safe-area-inset-bottom)) !important;
+    top:auto !important;
+    width:auto !important;
+    height:132px !important;
+    min-height:132px !important;
+    max-height:132px !important;
+    padding:10px 11px 10px 13px !important;
+    border-radius:13px !important;
+    background:rgba(4,10,8,.97) !important;
+    backdrop-filter:none !important;
+    overflow:hidden !important;
+    z-index:60 !important;
+  }
+  .lower:before{top:12px !important;bottom:12px !important;width:4px !important;}
+  .chapter{
+    font-size:11px !important;
+    line-height:1.18 !important;
+    margin-bottom:5px !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+  .caption{
+    font-size:10.5px !important;
+    line-height:1.36 !important;
+    min-height:0 !important;
+    max-height:64px !important;
+    overflow:hidden !important;
+  }
+  .chips{margin-top:6px !important;gap:4px !important;flex-wrap:nowrap !important;overflow:hidden !important;}
+  .chip{font-size:7.5px !important;padding:3px 5px !important;white-space:nowrap !important;}
+  .callout{
+    width:calc(100vw - 28px) !important;
+    max-width:none !important;
+    top:42% !important;
+    font-size:14px !important;
+    padding:9px 11px !important;
+    text-align:center !important;
+    z-index:50 !important;
+  }
+  .results-panel{
+    left:8px !important;
+    right:8px !important;
+    top:auto !important;
+    bottom:148px !important;
+    width:auto !important;
+    transform:none !important;
+    padding:7px 9px !important;
+    border-radius:12px !important;
+    background:rgba(4,10,8,.97) !important;
+    backdrop-filter:none !important;
+    z-index:68 !important;
+  }
+  .results-panel.show{transform:none !important;}
+  .results-title{font-size:9px !important;}
+  .results-sub{font-size:7px !important;margin:2px 0 5px !important;}
+  .results-list{grid-template-columns:1fr 1fr !important;gap:3px 7px !important;}
+  .result-item{font-size:8px !important;gap:5px !important;}
+  .result-rank{width:17px !important;font-size:8px !important;}
+  .replay{
+    right:max(8px, env(safe-area-inset-right)) !important;
+    bottom:calc(max(8px, env(safe-area-inset-bottom)) + 4px) !important;
+    width:34px !important;height:34px !important;padding:0 !important;
+    font-size:0 !important;border-radius:50% !important;opacity:.62 !important;z-index:80 !important;
+  }
+  .replay:after{content:"↻";font-size:18px;line-height:34px;}
+}
+
+/* 小さめiPhone SE系 */
+@media (max-width: 390px) and (orientation: portrait){
+  .title h1{font-size:14px !important;}
+  .title .sub{display:none !important;}
+  .scene{inset:56px 2px 222px 2px !important;}
+  .track3d{transform:rotateX(45deg) rotateZ(-4deg) scale(.92) !important;}
+  .ranking{bottom:137px !important;padding:6px 8px !important;}
+  .rank-list{grid-template-columns:1fr !important;}
+  .lower{height:124px !important;min-height:124px !important;max-height:124px !important;}
+  .caption{font-size:10px !important;max-height:60px !important;}
+  .chips{display:none !important;}
+  .results-panel{bottom:137px !important;}
+  .results-list{grid-template-columns:1fr !important;}
+}
+
+/* iPhone横持ち：上部を削り、下部実況＋コースを広く */
+@media (max-width: 932px) and (orientation: landscape){
+  html, body{overflow:hidden !important;}
+  #app{height:100svh !important;height:100dvh !important;min-height:0 !important;overflow:hidden !important;}
+  .topbar{
+    top:max(5px, env(safe-area-inset-top)) !important;
+    right:max(8px, env(safe-area-inset-right)) !important;
+    left:auto !important;
+    width:auto !important;
+    z-index:90 !important;
+  }
+  .title{width:300px !important;max-width:300px !important;padding:5px 8px !important;border-right:3px solid var(--gold) !important;background:rgba(5,8,13,.96) !important;}
+  .title h1{font-size:14px !important;line-height:1.1 !important;}
+  .title .sub,.clock,.hud,.note,.coursebox{display:none !important;}
+  .scene{inset:42px 6px 112px 6px !important;perspective:680px !important;}
+  .track3d{transform:rotateX(52deg) rotateZ(-5deg) scale(.98) !important;border-radius:16px !important;}
+  canvas{border-radius:16px !important;}
+  .ranking{
+    left:max(8px, env(safe-area-inset-left)) !important;top:8px !important;bottom:auto !important;
+    width:230px !important;padding:6px 8px !important;border-radius:10px !important;
+    background:rgba(4,10,8,.94) !important;backdrop-filter:none !important;z-index:65 !important;
+  }
+  .rank-title{font-size:8px !important;margin-bottom:3px !important;}
+  .rank-list{gap:2px !important;}
+  .rank-item{font-size:7.5px !important;gap:4px !important;}
+  .rank-no{width:16px !important;font-size:7px !important;}
+  .lower{
+    left:max(8px, env(safe-area-inset-left)) !important;
+    right:8px !important;
+    bottom:max(6px, env(safe-area-inset-bottom)) !important;
+    top:auto !important;
+    height:96px !important;min-height:96px !important;max-height:96px !important;
+    padding:8px 12px !important;border-radius:11px !important;
+    background:rgba(4,10,8,.97) !important;backdrop-filter:none !important;z-index:70 !important;
+  }
+  .chapter{font-size:12px !important;line-height:1.15 !important;margin-bottom:4px !important;}
+  .caption{font-size:9.5px !important;line-height:1.32 !important;max-height:38px !important;overflow:hidden !important;}
+  .chips{margin-top:5px !important;gap:4px !important;}
+  .chip{font-size:7px !important;padding:2px 5px !important;}
+  .zoom-panel{display:none !important;}
+  .callout{top:48% !important;font-size:13px !important;padding:8px 12px !important;max-width:58vw !important;}
+  .results-panel{top:8px !important;left:50% !important;right:auto !important;width:260px !important;transform:translateX(-50%) !important;padding:7px 8px !important;background:rgba(4,10,8,.97) !important;backdrop-filter:none !important;z-index:75 !important;}
+  .results-title{font-size:8px !important}.results-sub{font-size:7px !important;margin:2px 0 5px !important}.result-item{font-size:7.5px !important;}
+  .replay{right:8px !important;bottom:8px !important;width:30px !important;height:30px !important;font-size:0 !important;padding:0 !important;border-radius:50% !important;opacity:.55 !important;z-index:82 !important;}
+  .replay:after{content:"↻";font-size:16px;line-height:30px;}
+}
+
+/* スマホの出走馬一覧は縦スクロールしやすく */
+@media (max-width:768px){
+  .intro-screen{padding:max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)) !important;align-items:flex-start !important;overflow:auto !important;-webkit-overflow-scrolling:touch !important;}
+  .intro-card{width:100% !important;max-height:none !important;min-height:auto !important;overflow:visible !important;padding:12px 10px !important;border-radius:16px !important;}
+  .intro-title{font-size:18px !important;}
+  .intro-sub{font-size:10px !important;margin-bottom:10px !important;}
+  .roster-grid{grid-template-columns:1fr 1fr !important;gap:5px 6px !important;}
+  .roster-item{grid-template-columns:24px 1fr !important;gap:5px !important;min-height:38px !important;padding:5px 6px !important;}
+  .roster-no{width:22px !important;height:22px !important;font-size:11px !important;border-radius:6px !important;}
+  .roster-horse{font-size:10px !important;}
+  .roster-jockey{grid-column:2 !important;font-size:8px !important;margin-top:-2px !important;}
+  .start-race{font-size:13px !important;padding:10px 22px !important;position:sticky !important;bottom:8px !important;}
+}
+
+
+/* ===== iPhone tap / start button hardening ===== */
+.intro-screen{pointer-events:auto !important;}
+.intro-card,.intro-actions,.start-race{pointer-events:auto !important;}
+.start-race{touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;position:relative;z-index:1002;}
+.start-race.pressed{filter:brightness(1.10);}
+.intro-screen.hide{display:none !important;opacity:0 !important;visibility:hidden !important;pointer-events:none !important;}
+
+
+
+/* ===== JRA SCREENSHOT IMPORTER / PHASE 1 ===== */
+.import-box{
+  margin:14px 0 16px;padding:14px;border:1px solid rgba(216,185,104,.34);
+  background:rgba(216,185,104,.07);border-radius:16px;
+}
+.import-title{font-size:14px;font-weight:900;color:#f1d78c;margin-bottom:6px;letter-spacing:.04em}
+.import-help{font-size:11px;color:#cfd7e1;line-height:1.5;margin-bottom:10px}
+.import-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.import-file{max-width:100%;font-size:12px;color:#e8eef7}
+.import-btn,.import-secondary{
+  appearance:none;border-radius:999px;padding:9px 15px;font-weight:900;font-size:12px;cursor:pointer;
+}
+.import-btn{border:1px solid rgba(216,185,104,.65);background:linear-gradient(180deg,#e5c976,#b99a4d);color:#07110b}
+.import-secondary{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff}
+.import-btn:disabled,.import-secondary:disabled{opacity:.45;cursor:not-allowed}
+.import-status{margin-top:8px;font-size:11px;color:#dbe3ef;min-height:18px;line-height:1.45}
+.import-status.error{color:#ff9c9c}.import-status.ok{color:#8ff0a8}
+.ocr-review{display:none;margin-top:12px}.ocr-review.show{display:block}
+.review-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:7px}
+.review-title{font-size:12px;font-weight:900;color:#fff2b2}
+.review-note{font-size:10px;color:#cfd7e1}
+.review-table{display:grid;gap:5px;max-height:320px;overflow:auto;padding-right:3px}
+.review-row{display:grid;grid-template-columns:52px minmax(130px,1fr) minmax(110px,.75fr) 34px;gap:6px;align-items:center}
+.review-row input{width:100%;min-width:0;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.24);color:#fff;border-radius:8px;padding:7px 8px;font:inherit;font-size:11px}
+.review-row input[type=number]{text-align:center}
+.row-del{width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fff;cursor:pointer}
+.raw-ocr{margin-top:10px}.raw-ocr summary{font-size:10px;color:#cfd7e1;cursor:pointer}
+.raw-ocr textarea{width:100%;height:120px;margin-top:6px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.28);color:#e8eef7;border-radius:9px;padding:8px;font-size:10px;line-height:1.35}
+.import-warning{margin-top:9px;padding:8px 10px;border-radius:10px;background:rgba(255,177,74,.09);border:1px solid rgba(255,177,74,.22);font-size:10px;line-height:1.45;color:#ffe0a8}
+.saved-actions{display:none;gap:7px;flex-wrap:wrap;margin-top:10px}.saved-actions.show{display:flex}
+@media(max-width:600px){
+  .import-box{padding:10px;margin:9px 0 10px}.import-title{font-size:11px}.import-help{font-size:9px}.import-btn,.import-secondary{font-size:10px;padding:8px 12px}
+  .review-row{grid-template-columns:42px minmax(100px,1fr) minmax(88px,.8fr) 30px;gap:4px}.review-row input{font-size:9px;padding:6px}.row-del{width:28px;height:28px}
+  .review-table{max-height:250px}.import-status,.review-note,.import-warning{font-size:8.5px}
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="intro-screen" id="introScreen">
+    <div class="intro-card">
+      <div class="intro-kicker">TAKARAZUKA KINEN 2026</div>
+      <div class="intro-title">出走馬・騎手一覧</div>
+      <div class="import-box" id="importBox">
+        <div class="import-title">JRA出走表スクリーンショットから読み込む</div>
+        <div class="import-help">JRA公式サイトの出走表スクリーンショットを1枚または複数枚選択すると、端末内のブラウザで日本語OCRを行います。認識結果は必ず編集・確認してから反映できます。</div>
+        <div class="import-actions">
+          <input class="import-file" id="ocrImageInput" type="file" accept="image/*" multiple>
+          <button class="import-btn" id="runOcrBtn" type="button">スクショを読み取る</button>
+          <button class="import-secondary" id="addReviewRowBtn" type="button">行を追加</button>
+        </div>
+        <div class="import-status" id="ocrStatus">画像を選択してください。</div>
+        <div class="ocr-review" id="ocrReview">
+          <div class="review-head">
+            <div class="review-title">認識結果の確認</div>
+            <div class="review-note">馬番・馬名・騎手を修正できます</div>
+          </div>
+          <div class="review-table" id="reviewTable"></div>
+          <div class="import-actions" style="margin-top:9px">
+            <button class="import-btn" id="applyRosterBtn" type="button">この出走馬を反映</button>
+            <button class="import-secondary" id="clearImportBtn" type="button">認識結果をクリア</button>
+          </div>
+          <details class="raw-ocr"><summary>OCR生テキストを確認</summary><textarea id="rawOcrText"></textarea></details>
+        </div>
+        <div class="import-warning">第一段階では「出走馬・騎手の置換」までです。読み込み後の脚質・位置取り・着順予想は自動生成しません。アニメーションを再生する場合、動きは既存の仮プロファイルを馬番ごとに流用します。</div>
+        <div class="saved-actions" id="savedActions">
+          <button class="import-secondary" id="saveHtmlBtn" type="button">反映済みHTMLを保存</button>
+        </div>
+      </div>
+      <div class="intro-sub" id="introSub">第67回 宝塚記念 GⅠ｜阪神芝2200m｜全18頭</div>
+      <div class="roster-grid" id="rosterGrid">
+      <div class="roster-item">
+        <div class="roster-no">1</div>
+        <div class="roster-horse">ダノンデサイル</div>
+        <div class="roster-jockey">戸崎圭太</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">2</div>
+        <div class="roster-horse">ミュージアムマイル</div>
+        <div class="roster-jockey">D. レーン</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">3</div>
+        <div class="roster-horse">シュガークン</div>
+        <div class="roster-jockey">吉村誠之助</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">4</div>
+        <div class="roster-horse">ミクニインスパイア</div>
+        <div class="roster-jockey">丹内祐次</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">5</div>
+        <div class="roster-horse">クロワデュノール</div>
+        <div class="roster-jockey">北村友一</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">6</div>
+        <div class="roster-horse">ビザンチンドリーム</div>
+        <div class="roster-jockey">西村淳也</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">7</div>
+        <div class="roster-horse">ファミリータイム</div>
+        <div class="roster-jockey">幸英明</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">8</div>
+        <div class="roster-horse">タガノデュード</div>
+        <div class="roster-jockey">高杉吏麒</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">9</div>
+        <div class="roster-horse">コスモキュランダ</div>
+        <div class="roster-jockey">横山武史</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">10</div>
+        <div class="roster-horse">ジューンテイク</div>
+        <div class="roster-jockey">松山弘平</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">11</div>
+        <div class="roster-horse">シンエンペラー</div>
+        <div class="roster-jockey">坂井瑠星</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">12</div>
+        <div class="roster-horse">マイネルエンペラー</div>
+        <div class="roster-jockey">川田将雅</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">13</div>
+        <div class="roster-horse">シェイクユアハート</div>
+        <div class="roster-jockey">古川吉洋</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">14</div>
+        <div class="roster-horse">スティンガーグラス</div>
+        <div class="roster-jockey">岩田望来</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">15</div>
+        <div class="roster-horse">マイユニバース</div>
+        <div class="roster-jockey">横山典弘</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">16</div>
+        <div class="roster-horse">メイショウタバル</div>
+        <div class="roster-jockey">武豊</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">17</div>
+        <div class="roster-horse">レガレイラ</div>
+        <div class="roster-jockey">C. ルメール</div>
+      </div>
+      <div class="roster-item">
+        <div class="roster-no">18</div>
+        <div class="roster-horse">ミステリーウェイ</div>
+        <div class="roster-jockey">松本大輝</div>
+      </div>
+      </div>
+      <div class="intro-actions">
+        <button class="start-race" id="startRaceBtn" type="button" onclick="window.forceStartRace && window.forceStartRace(); return false;" ontouchstart="this.classList.add('pressed')" ontouchend="window.forceStartRace && window.forceStartRace(); return false;">レース展開を再生</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <div class="title">
+      <h1>第67回 宝塚記念 GⅠ</h1>
+      <div class="sub">阪神芝2200m｜⑯メイショウタバルの持続逃げを⑤クロワデュノールが早め進出で捕らえる展開予想アニメーション</div>
+    </div>
+    <div class="clock">阪神11R / 内回り芝2200m</div>
+  </div>
+
+  <div class="note">※展開シナリオは、⑯メイショウタバルが主張して逃げ、⑤クロワデュノールが3角手前から外めを早め進出。直線では⑯の粘りを⑤が持続力で捕らえ、①ダノンデサイル・⑰レガレイラ・⑧タガノデュード・②ミュージアムマイルが3着圏を争う想定です。</div>
+
+  <div class="ranking">
+    <div class="rank-title">LIVE POSITION</div>
+    <div class="rank-list" id="ranking"></div>
+  </div>
+
+  <div class="results-panel" id="resultsPanel">
+    <div class="results-title">FINISH ORDER / 想定着順</div>
+    <div class="results-sub">⑤クロワデュノール差し切り想定｜⑯・①・⑰・⑧が相手候補</div>
+    <div class="results-list" id="resultsList"></div>
+  </div>
+
+
+  <div class="zoom-panel" id="zoomPanel">
+    <div class="zoom-title">FINAL STRAIGHT CAM</div>
+    <div class="zoom-sub">⑯の粘りに⑤が迫り、①・⑰・⑧・②が3着圏へ追い込む</div>
+    <canvas id="zoomRace"></canvas>
+  </div>
+
+  <div class="hud">
+    <div class="hud-title">RACE FLOW</div>
+    <div class="hud-row"><span>Course</span><b>Hanshin Turf 2200m</b></div>
+    <div class="hud-row"><span>Pace</span><b id="pace">Sustained Pace / 持続戦</b></div>
+    <div class="hud-row"><span>Key Point</span><b id="keypoint">⑤クロワデュノールの早め進出</b></div>
+    <div class="phasebar"><span></span></div>
+  </div>
+
+
+  <div class="coursebox">
+    <div class="coursebox-title">COURSE OVERVIEW / SHAPE RECREATED</div>
+    <div class="coursebox-list">
+      <div>直線 <b>356.5m</b> / 内回りコース</div>
+      <div>スタートは2000m地点より後方</div>
+      <div>スタート直後は下りで <b>前半速くなりやすい</b></div>
+      <div>2コーナー付近で一旦落ち着きやすい</div>
+      <div>短い直線なので <b>3〜4角からの進出</b> が重要</div>
+      <div>残り1000m付近から <b>4〜5Fのロングスパート</b> になりやすい</div>
+    </div>
+  </div>
+
+
+  <div class="scene">
+    <div class="track3d">
+      <canvas id="race"></canvas>
+    </div>
+  </div>
+
+  <div class="callout" id="callout">⑯メイショウタバルが主導権</div>
+
+  <div class="lower">
+    <div class="chapter" id="chapter">第一幕　スタート〜1角：⑯メイショウタバルがハナへ</div>
+    <div class="caption" id="caption">
+      <span class="active">スタートして最初の注目は外枠⑯メイショウタバル。内から③シュガークン、⑦ファミリータイム、外から⑱ミステリーウェイも前へ行くが、テンの速さと主張で⑯が一枚上。武豊騎手は無理に抑えずリズム重視でハナへ向かう。</span>
+      <span>1〜2角では⑯メイショウタバルが先頭。⑱ミステリーウェイが外2番手、内に③シュガークン、⑦ファミリータイム。④ミクニインスパイア、⑨コスモキュランダ、⑩ジューンテイク、⑫マイネルエンペラーが先団直後に続く。</span>
+      <span>向こう正面でもペースはスローにはならない。⑯が自分の形で逃げるが、⑱・③・⑦が近く、完全な単騎楽逃げではない。①ダノンデサイルは内の中団前、⑤クロワデュノールはその外でいつでも動ける位置。</span>
+      <span>3角手前で⑤クロワデュノールがじわっと進出開始。北村友一騎手は早めに外へ出し、逃げる⑯を射程圏に入れる。①は内で我慢、②ミュージアムマイルは脚を溜め、⑰レガレイラと⑧タガノデュードは外から押し上げる。</span>
+      <span>3〜4角でレースが一気に動く。⑯メイショウタバルはまだ先頭で手応えも悪くないが、外から⑤クロワデュノールが抜群の手応えで進出。①は直線の進路待ち、⑰は大外、⑧は中団後ろから外へ持ち出す。</span>
+      <span>直線入口から残り200m。⑯が粘り、⑤が外から長く脚を使って迫る。①ダノンデサイルは内からしぶとく伸び、⑰レガレイラ、⑧タガノデュード、②ミュージアムマイルが3着争いへ加わる。</span>
+      <span>ゴール前は⑤クロワデュノールが⑯メイショウタバルを捕らえにかかる。⑯はしぶといが、最後は⑤の持続力が上回る想定。2着は⑯または①、3着争いは①・⑰・⑧・②・⑬まで。</span>
+    </div>
+    <div class="chips">
+      <div class="chip active">スタート</div>
+      <div class="chip">1〜2角</div>
+      <div class="chip">向正面</div>
+      <div class="chip">3角手前</div>
+      <div class="chip">3〜4角</div>
+      <div class="chip">直線</div>
+      <div class="chip">ゴール</div>
+    </div>
+  </div>
+
+  <button class="replay" onclick="location.reload()">もう一度再生</button>
+</div>
+
+<script id="embeddedRosterData" type="application/json">{}</script>
+<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+
+// ===== Compatibility first: must run before any canvas drawing =====
+(function(){
+  if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      if (typeof r === 'number') r = {tl:r,tr:r,br:r,bl:r};
+      else r = Object.assign({tl:0,tr:0,br:0,bl:0}, r || {});
+      this.beginPath();
+      this.moveTo(x + r.tl, y);
+      this.lineTo(x + w - r.tr, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+      this.lineTo(x + w, y + h - r.br);
+      this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+      this.lineTo(x + r.bl, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+      this.lineTo(x, y + r.tl);
+      this.quadraticCurveTo(x, y, x + r.tl, y);
+      this.closePath();
+      return this;
+    };
+  }
+})();
+const horses = [
+  {number:1, name:"ダノンデサイル", role:"内中団・堅実差し", color:"#b48cff", lane:-0.02, base:-0.145, surge:[0,0.010,0.040,0.085,0.125,0.155,0.168]},
+  {number:2, name:"ミュージアムマイル", role:"内で脚を溜める", color:"#64e18b", lane:-0.10, base:-0.165, surge:[0,0.005,0.020,0.045,0.080,0.130,0.162]},
+  {number:3, name:"シュガークン", role:"内先行", color:"#d8b968", lane:-0.18, base:-0.055, surge:[0,-0.004,-0.014,-0.028,-0.040,-0.050,-0.055]},
+  {number:4, name:"ミクニインスパイア", role:"先団直後", color:"#c0b7ff", lane:0.10, base:-0.105, surge:[0,0.000,0.010,0.022,0.032,0.038,0.035]},
+  {number:5, name:"クロワデュノール", role:"中団前外・早め進出", color:"#3aa7ff", lane:0.02, base:-0.135, surge:[0,0.015,0.050,0.105,0.155,0.195,0.205]},
+  {number:6, name:"ビザンチンドリーム", role:"後方差し", color:"#9de06f", lane:0.36, base:-0.225, surge:[0,0.000,0.020,0.055,0.085,0.100,0.105]},
+  {number:7, name:"ファミリータイム", role:"先行内", color:"#f0f0f0", lane:-0.24, base:-0.065, surge:[0,-0.004,-0.016,-0.035,-0.050,-0.058,-0.060]},
+  {number:8, name:"タガノデュード", role:"後方外・穴差し", color:"#9dd6ff", lane:0.58, base:-0.245, surge:[0,0.000,0.030,0.095,0.155,0.220,0.252]},
+  {number:9, name:"コスモキュランダ", role:"好位持続", color:"#f5a3a3", lane:0.16, base:-0.115, surge:[0,0.004,0.018,0.035,0.045,0.050,0.045]},
+  {number:10, name:"ジューンテイク", role:"先団後ろ", color:"#ffe08a", lane:0.22, base:-0.130, surge:[0,0.002,0.015,0.035,0.050,0.060,0.055]},
+  {number:11, name:"シンエンペラー", role:"中団差し", color:"#30f0e0", lane:0.30, base:-0.180, surge:[0,0.000,0.030,0.065,0.095,0.110,0.110]},
+  {number:12, name:"マイネルエンペラー", role:"先団直後", color:"#7fc8ff", lane:0.28, base:-0.125, surge:[0,0.002,0.018,0.045,0.065,0.075,0.070]},
+  {number:13, name:"シェイクユアハート", role:"後方直線勝負", color:"#a6c8ff", lane:0.50, base:-0.255, surge:[0,0.000,0.020,0.075,0.135,0.205,0.240]},
+  {number:14, name:"スティンガーグラス", role:"後方寄り", color:"#d7ff9d", lane:0.42, base:-0.235, surge:[0,0.000,0.015,0.045,0.080,0.100,0.105]},
+  {number:15, name:"マイユニバース", role:"後方待機", color:"#ffb14a", lane:0.64, base:-0.275, surge:[0,0.000,0.012,0.040,0.075,0.095,0.100]},
+  {number:16, name:"メイショウタバル", role:"逃げ・持続戦", color:"#ff5757", lane:-0.30, base:0.000, surge:[0.000,0.005,0.006,0.004,0.010,0.025,0.035]},
+  {number:17, name:"レガレイラ", role:"外中団差し", color:"#ff8bd1", lane:0.38, base:-0.175, surge:[0,0.004,0.035,0.085,0.125,0.170,0.188]},
+  {number:18, name:"ミステリーウェイ", role:"外2番手", color:"#ffcf99", lane:0.66, base:-0.035, surge:[0,-0.004,-0.015,-0.035,-0.055,-0.070,-0.080]}
+];
+
+// ===== Phase 1: JRA screenshot OCR importer =====
+const originalHorseSnapshot = horses.map(h => ({...h, surge:[...h.surge]}));
+const originalJockeys = {
+  1:"戸崎圭太",2:"D. レーン",3:"吉村誠之助",4:"丹内祐次",5:"北村友一",6:"西村淳也",7:"幸英明",8:"高杉吏麒",9:"横山武史",
+  10:"松山弘平",11:"坂井瑠星",12:"川田将雅",13:"古川吉洋",14:"岩田望来",15:"横山典弘",16:"武豊",17:"C. ルメール",18:"松本大輝"
+};
+let jockeysByNumber = {...originalJockeys};
+let importedMode = false;
+let lastImportedRows = [];
+
+function escHtml(v){
+  return String(v ?? "").replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderRoster(){
+  const grid = document.getElementById('rosterGrid');
+  if(!grid) return;
+  grid.innerHTML = horses.slice().sort((a,b)=>a.number-b.number).map(h => `
+    <div class="roster-item">
+      <div class="roster-no">${h.number}</div>
+      <div class="roster-horse">${escHtml(h.name)}</div>
+      <div class="roster-jockey">${escHtml(jockeysByNumber[h.number] || '')}</div>
+    </div>`).join('');
+}
+
+function normalizeOcrLine(v){
+  return String(v||'').replace(/[\u3000\t]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function compactJapanese(v){
+  return normalizeOcrLine(v).replace(/\s+/g,'').replace(/[|｜]/g,'');
+}
+function looksLikeHorseName(v){
+  const x = compactJapanese(v).replace(/[0-9①-⑱]/g,'').replace(/[()（）]/g,'');
+  if(x.length < 2 || x.length > 20) return false;
+  const kata = (x.match(/[ァ-ヶー]/g)||[]).length;
+  return kata >= Math.max(2, Math.floor(x.length*0.55));
+}
+function looksLikeJockey(v){
+  const x = normalizeOcrLine(v);
+  if(!x || x.length > 22) return false;
+  if(/調教師|馬主|斤量|単勝|人気|性齢|毛色|父|母|厩舎|オッズ|馬体重/.test(x)) return false;
+  if(/[一-龯々]{2,8}/.test(x)) return true;
+  if(/^[A-ZＡ-ＺＣＤＭＲＪ]\.?\s*[・.．]?\s*[ァ-ヶーA-Za-zＡ-Ｚａ-ｚ]{2,16}$/.test(x)) return true;
+  return false;
+}
+function cleanupHorseCandidate(v){
+  return compactJapanese(v)
+    .replace(/^\D*(?=\d{1,2}\D)/,'')
+    .replace(/^\d{1,2}/,'')
+    .replace(/[\[\]【】()（）]/g,'')
+    .replace(/[^ァ-ヶーA-Za-zＡ-Ｚａ-ｚ一-龯々]/g,'');
+}
+function cleanupJockeyCandidate(v){
+  return normalizeOcrLine(v)
+    .replace(/^\d{1,2}\s*/,'')
+    .replace(/^[▲△☆★]\s*/,'')
+    .replace(/\s*\d{2}(?:\.\d)?\s*$/,'')
+    .trim();
+}
+
+function parseJraOcrText(text){
+  const lines = String(text||'').split(/\r?\n/).map(normalizeOcrLine).filter(Boolean);
+  const rows = [];
+  const used = new Set();
+
+  // Primary: horse-number anchored blocks.
+  for(let i=0;i<lines.length;i++){
+    const m = lines[i].match(/(?:^|\s)(1[0-8]|[1-9])(?:\s|$|[枠馬])/);
+    if(!m) continue;
+    const num = Number(m[1]);
+    if(used.has(num)) continue;
+    const block = lines.slice(i, Math.min(lines.length, i+8));
+    let horse=''; let jockey='';
+    for(const line of block){
+      const c = cleanupHorseCandidate(line);
+      if(!horse && looksLikeHorseName(c)) { horse=c; continue; }
+      if(horse && !jockey && looksLikeJockey(line)) { jockey=cleanupJockeyCandidate(line); break; }
+    }
+    if(horse){
+      rows.push({number:num,name:horse,jockey}); used.add(num);
+    }
+  }
+
+  // Fallback: collect likely Katakana horse names in reading order.
+  if(rows.length < 5){
+    const names=[];
+    for(const line of lines){
+      const parts = line.match(/[ァ-ヶー]{2,18}/g) || [];
+      for(const p of parts){
+        if(looksLikeHorseName(p) && !names.includes(p)) names.push(p);
+      }
+    }
+    if(names.length){
+      rows.length=0;
+      names.slice(0,18).forEach((name,idx)=>rows.push({number:idx+1,name,jockey:''}));
+    }
+  }
+
+  rows.sort((a,b)=>a.number-b.number);
+  return rows;
+}
+
+function setOcrStatus(msg, kind=''){
+  const el=document.getElementById('ocrStatus'); if(!el) return;
+  el.textContent=msg; el.classList.remove('error','ok'); if(kind) el.classList.add(kind);
+}
+function makeReviewRow(row={number:'',name:'',jockey:''}){
+  const div=document.createElement('div'); div.className='review-row';
+  div.innerHTML=`<input class="rv-no" type="number" min="1" max="18" inputmode="numeric" value="${escHtml(row.number)}" aria-label="馬番">
+    <input class="rv-horse" type="text" value="${escHtml(row.name)}" placeholder="馬名" aria-label="馬名">
+    <input class="rv-jockey" type="text" value="${escHtml(row.jockey)}" placeholder="騎手" aria-label="騎手">
+    <button class="row-del" type="button" aria-label="削除">×</button>`;
+  div.querySelector('.row-del').addEventListener('click',()=>div.remove());
+  return div;
+}
+function showReviewRows(rows){
+  const table=document.getElementById('reviewTable'); const review=document.getElementById('ocrReview');
+  table.innerHTML=''; (rows.length?rows:[{number:1,name:'',jockey:''}]).forEach(r=>table.appendChild(makeReviewRow(r)));
+  review.classList.add('show');
+}
+function collectReviewRows(){
+  const rows=[...document.querySelectorAll('#reviewTable .review-row')].map(r=>({
+    number:Number(r.querySelector('.rv-no').value),
+    name:r.querySelector('.rv-horse').value.trim(),
+    jockey:r.querySelector('.rv-jockey').value.trim()
+  })).filter(r=>Number.isInteger(r.number)&&r.number>=1&&r.number<=18&&r.name);
+  rows.sort((a,b)=>a.number-b.number);
+  return rows;
+}
+function validateRows(rows){
+  if(!rows.length) return '馬番と馬名が入力された行がありません。';
+  const nums=rows.map(r=>r.number); const dup=nums.find((n,i)=>nums.indexOf(n)!==i);
+  if(dup) return `馬番 ${dup} が重複しています。`;
+  return '';
+}
+
+function genericizePredictionUi(count){
+  importedMode=true;
+  const title=document.querySelector('.title h1'); if(title) title.textContent='JRA出走表 読み込みレース';
+  const sub=document.querySelector('.title .sub'); if(sub) sub.textContent='出走馬・騎手をスクリーンショットから反映｜脚質・展開予想は未設定';
+  const clock=document.querySelector('.clock'); if(clock) clock.textContent=`出走馬 ${count}頭 / 仮アニメーション`;
+  const note=document.querySelector('.note'); if(note) note.textContent='※第一段階：出走馬・騎手のみ反映済み。脚質・位置取り・着順予想はまだ生成していません。';
+  const introSub=document.getElementById('introSub'); if(introSub) introSub.textContent=`JRAスクリーンショット読込｜全${count}頭｜脚質・展開予想 未設定`;
+  const resultTitle=document.querySelector('.results-title'); if(resultTitle) resultTitle.textContent='ANIMATION ORDER / 仮アニメーション順';
+  const resultSub=document.querySelector('.results-sub'); if(resultSub) resultSub.textContent='既存の馬番別モーションを流用した表示です。予想着順ではありません。';
+  const zoomTitle=document.querySelector('.zoom-title'); if(zoomTitle) zoomTitle.textContent='FINAL STRAIGHT CAM / 仮表示';
+  const zoomSub=document.querySelector('.zoom-sub'); if(zoomSub) zoomSub.textContent='脚質・展開ロジックは第二段階で設定します';
+  const btn=document.getElementById('startRaceBtn'); if(btn) btn.textContent='仮アニメーションを再生';
+  const genericChapters=['第一幕　スタート','第二幕　1〜2角','第三幕　向こう正面','第四幕　3角手前','第五幕　3〜4角','第六幕　直線〜残り200m','第七幕　ゴール前'];
+  const genericKeys=['出走馬データ反映済み','位置取り未設定','ペース未設定','進出タイミング未設定','コーナー位置未設定','末脚評価未設定','着順予想未設定'];
+  const genericCallouts=['スタート','1〜2角','向こう正面','3角手前','3〜4角','直線','ゴール'];
+  for(let i=0;i<7;i++){ chapters[i]=genericChapters[i]; keys[i]=genericKeys[i]; callouts[i]=genericCallouts[i]; }
+  const genericCaptions=[
+    '出走馬・騎手は読み込み済みです。第一段階では脚質やスタート直後の位置取りを判定しません。',
+    '現在の馬の動きは既存HTMLの馬番別モーションを仮流用しています。実際の先行・差し関係を示すものではありません。',
+    'ペース想定は未設定です。第二段階で各馬の脚質や過去走を基に展開ロジックを作る想定です。',
+    '仕掛け位置は未設定です。ここでは表示確認用のアニメーションとして進行します。',
+    '3〜4角の位置取りも未設定です。読み込んだ馬名・騎手が正しく反映されているかを確認してください。',
+    '直線の伸び・評価はまだ予想ではありません。既存モーションの仮表示です。',
+    '表示される順番は予想着順ではありません。第一段階の目的は出走馬データの置換確認です。'
+  ];
+  captionSpans.forEach((el,i)=>{ if(genericCaptions[i]) el.textContent=genericCaptions[i]; });
+  const courseTitle=document.querySelector('.coursebox-title'); if(courseTitle) courseTitle.textContent='IMPORT STATUS / PHASE 1';
+  const courseList=document.querySelector('.coursebox-list'); if(courseList) courseList.innerHTML='<div>出走馬・騎手 <b>反映済み</b></div><div>脚質 <b>未設定</b></div><div>位置取り <b>未設定</b></div><div>展開予想 <b>未設定</b></div><div>想定着順 <b>未設定</b></div>';
+}
+
+function applyImportedRows(rows, persist=true){
+  const err=validateRows(rows); if(err){setOcrStatus(err,'error');return false;}
+  const profiles=originalHorseSnapshot;
+  const newHorses=rows.map((r,idx)=>{
+    const p=profiles.find(x=>x.number===r.number) || profiles[idx % profiles.length];
+    return {...p, number:r.number, name:r.name, role:'未設定', surge:[...p.surge]};
+  });
+  horses.splice(0,horses.length,...newHorses);
+  jockeysByNumber={}; rows.forEach(r=>jockeysByNumber[r.number]=r.jockey||'');
+  lastImportedRows=rows.map(r=>({...r}));
+  renderRoster(); genericizePredictionUi(rows.length);
+  document.getElementById('savedActions')?.classList.add('show');
+  setOcrStatus(`${rows.length}頭を反映しました。馬名・騎手の置換は完了です。`,'ok');
+  if(persist){ try{ localStorage.setItem('jraRaceFlowImportedRows',JSON.stringify(rows)); }catch(e){} }
+  return true;
+}
+
+async function runOcr(){
+  const input=document.getElementById('ocrImageInput');
+  const imageFiles=[...(input?.files || [])];
+  if(!imageFiles.length){setOcrStatus('先にJRA出走表のスクリーンショットを選択してください。','error');return;}
+  if(!window.Tesseract){setOcrStatus('OCRライブラリを読み込めませんでした。インターネット接続を確認してください。','error');return;}
+  const btn=document.getElementById('runOcrBtn'); btn.disabled=true;
+  setOcrStatus('日本語OCRを準備しています。初回は言語データを取得するため通信が発生します。');
+  let worker;
+  try{
+    worker=await Tesseract.createWorker('jpn');
+    const textParts=[];
+    for(let i=0;i<imageFiles.length;i++){
+      setOcrStatus(`画像を読み取っています… ${i+1}/${imageFiles.length}`);
+      const ret=await worker.recognize(imageFiles[i]);
+      textParts.push(ret?.data?.text || '');
+    }
+    const text=textParts.join('\n');
+    document.getElementById('rawOcrText').value=text;
+    const rows=parseJraOcrText(text);
+    showReviewRows(rows);
+    if(rows.length){ setOcrStatus(`${rows.length}頭分の候補を抽出しました。馬番・馬名・騎手を確認して修正してください。`,'ok'); }
+    else { setOcrStatus('自動抽出できませんでした。OCR生テキストを確認し、「行を追加」から手入力できます。','error'); }
+  }catch(e){
+    console.error(e); setOcrStatus('OCR処理に失敗しました。画像形式・通信状態を確認してください。','error');
+  }finally{
+    try{ if(worker) await worker.terminate(); }catch(e){}
+    btn.disabled=false;
+  }
+}
+
+function saveImportedHtml(){
+  if(!lastImportedRows.length){setOcrStatus('先に出走馬を反映してください。','error');return;}
+  const dataEl=document.getElementById('embeddedRosterData');
+  dataEl.textContent=JSON.stringify({rows:lastImportedRows, savedAt:new Date().toISOString()}).replace(/</g,'\\u003c');
+  const clone=document.documentElement.cloneNode(true);
+  const status=clone.querySelector('#ocrStatus'); if(status){status.textContent='保存済み出走馬データを読み込みました。';status.className='import-status ok';}
+  const fileInput=clone.querySelector('#ocrImageInput'); if(fileInput) fileInput.value='';
+  const html='<!doctype html>\n'+clone.outerHTML;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='race_flow_animation_imported.html'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  setOcrStatus('反映済みHTMLを保存しました。','ok');
+}
+
+function restoreDefaultRoster(){
+  horses.splice(0,horses.length,...originalHorseSnapshot.map(h=>({...h,surge:[...h.surge]})));
+  jockeysByNumber={...originalJockeys}; importedMode=false; lastImportedRows=[];
+  try{localStorage.removeItem('jraRaceFlowImportedRows')}catch(e){}
+  location.reload();
+}
+
+function initImporter(){
+  document.getElementById('runOcrBtn')?.addEventListener('click',runOcr);
+  document.getElementById('addReviewRowBtn')?.addEventListener('click',()=>{
+    document.getElementById('ocrReview')?.classList.add('show');
+    const table=document.getElementById('reviewTable');
+    const used=[...table.querySelectorAll('.rv-no')].map(x=>Number(x.value)).filter(Boolean);
+    let n=1; while(used.includes(n)&&n<18)n++;
+    table.appendChild(makeReviewRow({number:n,name:'',jockey:''}));
+  });
+  document.getElementById('applyRosterBtn')?.addEventListener('click',()=>applyImportedRows(collectReviewRows()));
+  document.getElementById('clearImportBtn')?.addEventListener('click',()=>{
+    document.getElementById('reviewTable').innerHTML=''; document.getElementById('rawOcrText').value='';
+    document.getElementById('ocrReview')?.classList.remove('show'); setOcrStatus('認識結果をクリアしました。');
+  });
+  document.getElementById('saveHtmlBtn')?.addEventListener('click',saveImportedHtml);
+  document.getElementById('restoreDefaultBtn')?.addEventListener('click',restoreDefaultRoster);
+
+  let embeddedRows=[];
+  try{ const d=JSON.parse(document.getElementById('embeddedRosterData')?.textContent||'{}'); if(Array.isArray(d.rows)) embeddedRows=d.rows; }catch(e){}
+  if(embeddedRows.length){
+    showReviewRows(embeddedRows); applyImportedRows(embeddedRows,false); setOcrStatus('保存済み出走馬データを読み込みました。','ok'); return;
+  }
+  try{
+    const saved=JSON.parse(localStorage.getItem('jraRaceFlowImportedRows')||'[]');
+    if(Array.isArray(saved)&&saved.length){showReviewRows(saved);applyImportedRows(saved,false);setOcrStatus('前回この端末で反映した出走馬を復元しました。','ok');}
+  }catch(e){}
+}
+
+
+const canvas = document.getElementById("race");
+const ctx = canvas.getContext("2d");
+const rankingEl = document.getElementById("ranking");
+const resultsListEl = document.getElementById("resultsList");
+const resultsPanelEl = document.getElementById("resultsPanel");
+const zoomPanelEl = document.getElementById("zoomPanel");
+const zoomCanvas = document.getElementById("zoomRace");
+const zctx = zoomCanvas.getContext("2d");
+const chapterEl = document.getElementById("chapter");
+const captionSpans = [...document.querySelectorAll(".caption span")];
+const chips = [...document.querySelectorAll(".chip")];
+const paceEl = document.getElementById("pace");
+const keyEl = document.getElementById("keypoint");
+const callout = document.getElementById("callout");
+
+const chapters = [
+  "第一幕　スタート〜1角：⑯メイショウタバルが主張",
+  "第二幕　1〜2角：先行勢が隊列を形成",
+  "第三幕　向こう正面：スローではない持続ラップ",
+  "第四幕　3角手前：⑤クロワデュノールが進出開始",
+  "第五幕　3〜4角：⑯の粘りに⑤が接近",
+  "第六幕　直線〜残り200m：⑤が外から迫る",
+  "第七幕　ゴール前：⑤クロワデュノール差し切り想定"
+];
+const paces = ["Fast Start","Forward Pressure","Sustained Pace","Early Move","Corner Drive","Final Uphill","Finish"];
+const keys = ["⑯が外枠からハナへ","⑱・③・⑦が追走","11秒後半〜12秒前半の持続戦","⑤が外から射程圏へ","内は進路待ち・外はロス覚悟","①・⑰・⑧・②が3着争い","⑤の持続力が上回る想定"];
+const callouts = ["⑯メイショウタバルがハナへ", "⑱・③・⑦が前で追走", "スローではなく持続戦", "⑤クロワデュノール進出開始", "3〜4角でレースが動く", "⑯粘る、⑤迫る", "⑤クロワデュノール差し切り想定"];
+
+function resize(){
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
+  canvas.style.width = rect.width+"px";
+  canvas.style.height = rect.height+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener("resize", resize);
+resize();
+
+function resizeZoom(){
+  const rect = zoomCanvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  zoomCanvas.width = Math.floor(rect.width * dpr);
+  zoomCanvas.height = Math.floor(rect.height * dpr);
+  zctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener("resize", resizeZoom);
+resizeZoom();
+
+function drawZoomHorse(ctx2, x, y, scale, color, name, gallop, lead=false){
+  const bob = Math.sin(gallop*1.2) * 2.2 * scale;
+  const strideA = Math.sin(gallop) * 7 * scale;
+  const strideB = Math.sin(gallop + Math.PI) * 7 * scale;
+  const tail = Math.sin(gallop*0.9) * 3 * scale;
+
+  // shadow
+  ctx2.save();
+  ctx2.translate(x, y);
+  ctx2.scale(1, .55);
+  ctx2.fillStyle = "rgba(0,0,0,.22)";
+  ctx2.beginPath();
+  ctx2.ellipse(0, 18*scale, 24*scale, 8*scale, 0, 0, Math.PI*2);
+  ctx2.fill();
+  ctx2.restore();
+
+  ctx2.save();
+  ctx2.translate(x, y + bob);
+
+  // speed trail
+  for(let i=3;i>=1;i--){
+    ctx2.globalAlpha = 0.05 * i;
+    ctx2.fillStyle = color;
+    ctx2.beginPath();
+    ctx2.ellipse(-14*i*scale, 0, (24-i*3)*scale, (9-i)*scale, 0, 0, Math.PI*2);
+    ctx2.fill();
+  }
+  ctx2.globalAlpha = 1;
+
+  // tail
+  ctx2.strokeStyle = color;
+  ctx2.lineWidth = 5*scale;
+  ctx2.lineCap = "round";
+  ctx2.beginPath();
+  ctx2.moveTo(-21*scale, -1*scale);
+  ctx2.quadraticCurveTo(-28*scale, -4*scale-tail, -36*scale, -11*scale-tail*1.1);
+  ctx2.stroke();
+
+  ctx2.shadowColor = color;
+  ctx2.shadowBlur = 16;
+
+  // body
+  ctx2.fillStyle = color;
+  ctx2.beginPath();
+  ctx2.moveTo(-22*scale, -5*scale);
+  ctx2.quadraticCurveTo(-18*scale, -12*scale, -8*scale, -13*scale);
+  ctx2.quadraticCurveTo(8*scale, -14*scale, 20*scale, -8*scale);
+  ctx2.quadraticCurveTo(26*scale, -4*scale, 25*scale, 2*scale);
+  ctx2.quadraticCurveTo(22*scale, 9*scale, 8*scale, 11*scale);
+  ctx2.quadraticCurveTo(-9*scale, 12*scale, -19*scale, 7*scale);
+  ctx2.quadraticCurveTo(-25*scale, 4*scale, -22*scale, -5*scale);
+  ctx2.fill();
+
+  // neck + head
+  ctx2.beginPath();
+  ctx2.moveTo(12*scale, -9*scale);
+  ctx2.quadraticCurveTo(20*scale, -18*scale, 26*scale, -20*scale);
+  ctx2.quadraticCurveTo(29*scale, -17*scale, 28*scale, -11*scale);
+  ctx2.quadraticCurveTo(23*scale, -6*scale, 17*scale, -4*scale);
+  ctx2.closePath();
+  ctx2.fill();
+  ctx2.beginPath();
+  ctx2.ellipse(33*scale, -14*scale, 8*scale, 5.5*scale, 0.1, 0, Math.PI*2);
+  ctx2.fill();
+  ctx2.beginPath();
+  ctx2.ellipse(40*scale, -14*scale, 3*scale, 2.2*scale, 0.1, 0, Math.PI*2);
+  ctx2.fill();
+
+  // ears
+  ctx2.beginPath();
+  ctx2.moveTo(34*scale,-19*scale); ctx2.lineTo(33*scale,-25*scale); ctx2.lineTo(36*scale,-20*scale);
+  ctx2.moveTo(29*scale,-19*scale); ctx2.lineTo(28*scale,-25*scale); ctx2.lineTo(31*scale,-20*scale);
+  ctx2.fill();
+
+  // jockey
+  ctx2.shadowBlur = 0;
+  ctx2.fillStyle = "rgba(255,255,255,.96)";
+  ctx2.beginPath();
+  ctx2.arc(6*scale, -15*scale, 3.4*scale, 0, Math.PI*2);
+  ctx2.fill();
+  ctx2.strokeStyle = "rgba(255,255,255,.96)";
+  ctx2.lineWidth = 2.8*scale;
+  ctx2.beginPath();
+  ctx2.moveTo(6*scale,-11*scale);
+  ctx2.lineTo(2*scale,-4*scale);
+  ctx2.lineTo(-2*scale,1*scale);
+  ctx2.moveTo(2*scale,-4*scale);
+  ctx2.lineTo(10*scale,-1*scale);
+  ctx2.stroke();
+
+  // saddle
+  ctx2.fillStyle = "rgba(24,24,30,.75)";
+  ctx2.beginPath();
+  ctx2.roundRect(0, -2*scale, 10*scale, 7*scale, 2.5*scale);
+  ctx2.fill();
+
+  // reins
+  ctx2.strokeStyle = "rgba(255,255,255,.82)";
+  ctx2.lineWidth = 1.2*scale;
+  ctx2.beginPath();
+  ctx2.moveTo(10*scale,-6*scale);
+  ctx2.lineTo(28*scale,-13*scale);
+  ctx2.stroke();
+
+  // legs
+  ctx2.strokeStyle = "rgba(255,255,255,.96)";
+  ctx2.lineWidth = 2.6*scale;
+  ctx2.lineCap = "round";
+  ctx2.beginPath();
+  ctx2.moveTo(-13*scale, 6*scale); ctx2.lineTo(-19*scale, 14*scale + strideA*0.5); ctx2.lineTo(-14*scale, 24*scale + strideA);
+  ctx2.moveTo(-5*scale, 6*scale); ctx2.lineTo(-1*scale, 14*scale + strideB*0.5); ctx2.lineTo(2*scale, 24*scale + strideB);
+  ctx2.moveTo(9*scale, 5*scale); ctx2.lineTo(16*scale, 13*scale + strideB*0.5); ctx2.lineTo(20*scale, 23*scale + strideB);
+  ctx2.moveTo(16*scale, 4*scale); ctx2.lineTo(11*scale, 13*scale + strideA*0.5); ctx2.lineTo(9*scale, 23*scale + strideA);
+  ctx2.stroke();
+
+  // name tag
+  ctx2.fillStyle = "rgba(5,8,13,.74)";
+  ctx2.strokeStyle = "rgba(255,255,255,.14)";
+  ctx2.lineWidth = 1;
+  ctx2.font = `bold ${10*scale+2}px sans-serif`;
+  const tw = ctx2.measureText(name).width + 12;
+  ctx2.beginPath();
+  ctx2.roundRect(-tw/2, -44*scale, tw, 18*scale, 6*scale);
+  ctx2.fill();
+  ctx2.stroke();
+  ctx2.fillStyle = "#fff";
+  ctx2.textAlign = "center";
+  ctx2.fillText(name, 0, -31*scale);
+
+  if(lead){
+    ctx2.fillStyle = "rgba(241,215,140,.95)";
+    ctx2.font = `900 ${12*scale+2}px sans-serif`;
+    ctx2.fillText("LEAD", 0, -56*scale);
+  }
+  ctx2.restore();
+}
+
+function drawFinishZoom(states, t){
+  const rect = zoomCanvas.getBoundingClientRect();
+  const zw = rect.width, zh = rect.height;
+  zctx.clearRect(0,0,zw,zh);
+
+  // background with uphill then straight
+  const grad = zctx.createLinearGradient(0, 0, 0, zh);
+  grad.addColorStop(0, "#68855a");
+  grad.addColorStop(.20, "#91b16c");
+  grad.addColorStop(.21, "#c49a58");
+  grad.addColorStop(.58, "#9e7845");
+  grad.addColorStop(.59, "#59744a");
+  grad.addColorStop(1, "#46623d");
+  zctx.fillStyle = grad;
+  zctx.fillRect(0,0,zw,zh);
+
+  // rail and slope perspective
+  zctx.strokeStyle = "rgba(255,255,245,.95)";
+  zctx.lineWidth = 3;
+  zctx.beginPath();
+  zctx.moveTo(0, zh*0.28); zctx.lineTo(zw, zh*0.18);
+  zctx.moveTo(0, zh*0.70); zctx.lineTo(zw, zh*0.60);
+  zctx.stroke();
+
+  // hill cue
+  zctx.fillStyle = "rgba(255,255,255,.12)";
+  zctx.beginPath();
+  zctx.moveTo(0, zh*0.18); zctx.lineTo(zw*0.58, zh*0.12); zctx.lineTo(zw*0.58, zh*0.66); zctx.lineTo(0, zh*0.72);
+  zctx.closePath(); zctx.fill();
+
+  // finish line near right edge
+  const finishX = zw*0.84;
+  for(let i=0;i<14;i++){
+    zctx.fillStyle = i%2===0 ? "rgba(255,255,255,.96)" : "rgba(20,20,20,.85)";
+    zctx.fillRect(finishX-4, zh*0.18 + i*7, 8, 7);
+  }
+  zctx.fillStyle = "rgba(5,8,13,.92)";
+  zctx.fillRect(finishX-22, zh*0.10, 44, 16);
+  zctx.fillStyle = "#fff";
+  zctx.font = "900 10px sans-serif";
+  zctx.textAlign = "center";
+  zctx.fillText("GOAL", finishX, zh*0.22);
+
+  // determine contenders
+  const sorted = [...states].sort((a,b)=>b.prog-a.prog).slice(0,4);
+  const leader = sorted[0].prog;
+  const z = Math.max(0, Math.min(1, (t - 0.72) / 0.28));
+  sorted.forEach((s, i) => {
+    const gap = leader - s.prog;
+    const rel = Math.max(0, Math.min(0.10, gap));
+    const x = zw*(0.22 + 0.58*z - rel*4.2);
+    const y = zh*(0.64 - i*0.13 - rel*0.12);
+    const scale = Math.max(0.72, Math.min(1.18, (window.innerWidth < 600 ? 0.72 : 1) - i*0.06));
+    drawZoomHorse(zctx, x, y, scale, s.horse.color, `${s.horse.number}. ${s.horse.name}`, performance.now()/85 + i*0.6, i===0);
+  });
+
+  // caption
+  zctx.fillStyle = "rgba(255,255,255,.86)";
+  zctx.font = "bold 11px sans-serif";
+  zctx.textAlign = "left";
+  zctx.fillText("⑯メイショウタバルが粘り、⑤クロワデュノールが外から持続力で捕らえにかかる。", 12, zh - 10);
+}
+
+
+let courseCache = { key: "", points: [], lengths: [], total: 0 };
+
+function cubicPoint(p0, p1, p2, p3, t){
+  const mt = 1 - t;
+  return {
+    x: mt*mt*mt*p0.x + 3*mt*mt*t*p1.x + 3*mt*t*t*p2.x + t*t*t*p3.x,
+    y: mt*mt*mt*p0.y + 3*mt*mt*t*p1.y + 3*mt*t*t*p2.y + t*t*t*p3.y
+  };
+}
+
+function buildCoursePath(w, h){
+  const key = `${Math.round(w)}x${Math.round(h)}`;
+  if(courseCache.key === key) return courseCache;
+
+  const P = (x, y) => ({ x: w*x, y: h*y });
+  const segments = [
+    // S (right-lower) -> G (left-lower) : home straight, moving left
+    [P(0.73,0.72), P(0.64,0.72), P(0.44,0.72), P(0.26,0.72)],
+    // left bend upward
+    [P(0.26,0.72), P(0.15,0.72), P(0.08,0.60), P(0.12,0.50)],
+    // left-mid kink to backstretch
+    [P(0.12,0.50), P(0.14,0.42), P(0.23,0.40), P(0.34,0.35)],
+    // long diagonal backstretch to top
+    [P(0.34,0.35), P(0.48,0.29), P(0.61,0.22), P(0.69,0.17)],
+    // top-right rounded bend
+    [P(0.69,0.17), P(0.81,0.14), P(0.86,0.30), P(0.83,0.48)],
+    // descending right-hand bend
+    [P(0.83,0.48), P(0.81,0.58), P(0.77,0.66), P(0.73,0.72)]
+  ];
+
+  const pts = [];
+  for(const seg of segments){
+    const [p0,p1,p2,p3] = seg;
+    const steps = 38;
+    for(let i=0;i<=steps;i++){
+      if(pts.length && i===0) continue;
+      pts.push(cubicPoint(p0,p1,p2,p3,i/steps));
+    }
+  }
+
+  const lengths = [0];
+  let total = 0;
+  for(let i=1;i<pts.length;i++){
+    total += Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);
+    lengths.push(total);
+  }
+
+  courseCache = { key, points: pts, lengths, total };
+  return courseCache;
+}
+
+function getPoint(progress, lane, w, h){
+  const cache = buildCoursePath(w, h);
+  const pts = cache.points;
+  const lengths = cache.lengths;
+  const total = cache.total;
+
+  let p = progress % 1;
+  if(p < 0) p += 1;
+  const target = p * total;
+
+  let idx = 1;
+  while(idx < lengths.length && lengths[idx] < target) idx++;
+  idx = Math.min(idx, lengths.length - 1);
+
+  const prevLen = lengths[idx-1];
+  const nextLen = lengths[idx];
+  const segLen = Math.max(1e-6, nextLen - prevLen);
+  const t = (target - prevLen) / segLen;
+
+  const a = pts[idx-1];
+  const b = pts[idx];
+  const x = a.x + (b.x - a.x) * t;
+  const y = a.y + (b.y - a.y) * t;
+
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const mag = Math.max(1e-6, Math.hypot(dx, dy));
+  const nx = -dy / mag;
+  const ny = dx / mag;
+
+  // lane offset
+  const lanePx = lane * 24;
+  return { x: x + nx * lanePx, y: y + ny * lanePx };
+}
+
+function phaseFromT(t){
+  if(t < .12) return 0;
+  if(t < .28) return 1;
+  if(t < .44) return 2;
+  if(t < .60) return 3;
+  if(t < .76) return 4;
+  if(t < .92) return 5;
+  return 6;
+}
+function smoothstep(x){return x*x*(3-2*x)}
+function horseProgress(h, t){
+  const ph = phaseFromT(t);
+  let s = h.base + h.surge[ph];
+  // progressive interpolation to next phase
+  const bounds = [0,.12,.28,.44,.60,.76,.92,1];
+  const local = Math.max(0, Math.min(1, (t-bounds[ph])/(bounds[ph+1]-bounds[ph])));
+  const next = h.surge[Math.min(h.surge.length-1, ph+1)];
+  s = h.base + h.surge[ph]*(1-smoothstep(local)) + next*smoothstep(local);
+  return t*1.18 + s;
+}
+
+function drawTrack(w,h){
+  ctx.clearRect(0,0,w,h);
+  const cache = buildCoursePath(w, h);
+  const pts = cache.points;
+
+  // grass field
+  ctx.fillStyle = "rgba(24,78,36,.82)";
+  ctx.fillRect(0, 0, w, h);
+
+  // infield polygon to evoke the triangular interior of the uploaded course diagram
+  ctx.fillStyle = "rgba(255,255,255,.10)";
+  ctx.beginPath();
+  ctx.moveTo(w*0.31, h*0.65);
+  ctx.quadraticCurveTo(w*0.15, h*0.60, w*0.17, h*0.48);
+  ctx.quadraticCurveTo(w*0.20, h*0.37, w*0.34, h*0.35);
+  ctx.quadraticCurveTo(w*0.50, h*0.28, w*0.62, h*0.23);
+  ctx.quadraticCurveTo(w*0.69, h*0.20, w*0.73, h*0.27);
+  ctx.quadraticCurveTo(w*0.76, h*0.38, w*0.70, h*0.56);
+  ctx.quadraticCurveTo(w*0.66, h*0.64, w*0.51, h*0.66);
+  ctx.quadraticCurveTo(w*0.42, h*0.67, w*0.31, h*0.65);
+  ctx.closePath();
+  ctx.fill();
+
+  function strokePath(offset, width, color, alpha=1){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    pts.forEach((_, i) => {
+      const p = getPoint(i/(pts.length-1), offset/24, w, h);
+      if(i===0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // outer turf ribbon similar to reference illustration
+  strokePath(0, Math.max(78, w*0.10), "#86c857", 1);
+  strokePath(0, Math.max(64, w*0.082), "#4c9e3a", 1);
+
+  // track surface
+  strokePath(0, Math.max(42, w*0.055), "#c49a58", 1);
+  strokePath(0, Math.max(26, w*0.034), "#a8743e", 0.95);
+
+  // rails
+  strokePath(22, 3.5, "rgba(255,255,245,.95)", 1);
+  strokePath(-22, 3.5, "rgba(255,255,245,.95)", 1);
+
+  // start marker (S) and goal marker (G)
+  const startP = getPoint(0.03, 0.35, w, h);
+  const goalP = getPoint(0.23, -0.30, w, h);
+
+  function drawPin(p, color, letter){
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y-18, 14, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y+16);
+    ctx.lineTo(p.x-10, p.y-6);
+    ctx.lineTo(p.x+10, p.y-6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = "900 22px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(letter, p.x, p.y-11);
+    ctx.restore();
+  }
+  drawPin(goalP, "#456ad3", "G");
+  drawPin(startP, "#f39a3a", "S");
+
+  // distance markers 2,4,6,8,10 around the loop
+  const markers = [
+    { t: 0.16, n: "2" },
+    { t: 0.95, n: "4" },
+    { t: 0.88, n: "6" },
+    { t: 0.76, n: "8" },
+    { t: 0.64, n: "10" }
+  ];
+  markers.forEach(m => {
+    const p = getPoint(m.t, 0.70, w, h);
+    ctx.save();
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#cc4d4d";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 10, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#cc4d4d";
+    ctx.font = "bold 11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(m.n, p.x, p.y+4);
+    ctx.fillStyle = "#b34a4a";
+    ctx.fillRect(p.x-2, p.y+10, 4, 12);
+    ctx.restore();
+  });
+
+  // goal line explicitly on home straight near G
+  const g1 = getPoint(0.22, 0.50, w, h);
+  const g2 = getPoint(0.22, -0.50, w, h);
+  const ga = Math.atan2(g2.y - g1.y, g2.x - g1.x);
+  const glen = Math.hypot(g2.x - g1.x, g2.y - g1.y);
+  ctx.save();
+  ctx.translate((g1.x+g2.x)/2, (g1.y+g2.y)/2);
+  ctx.rotate(ga);
+  const seg = 8;
+  for(let i=0; i<glen/seg; i++){
+    ctx.fillStyle = i%2===0 ? "rgba(255,255,255,.96)" : "rgba(20,20,20,.85)";
+    ctx.fillRect(-glen/2 + i*seg, -4, seg, 8);
+  }
+  ctx.restore();
+
+  // subtle course caption
+  ctx.fillStyle = "rgba(255,255,255,.16)";
+  ctx.font = `900 ${Math.max(18, w*.026)}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText("HANSHIN TURF 2200m / INNER COURSE", w*0.52, h*0.84);
+  ctx.textAlign = "left";
+}
+
+function drawHorse(h, p, idx, w, ht){
+  const lane = h.lane;
+  const pos = getPoint(((p%1)+1)%1, lane, w, ht);
+  const behind = getPoint((((p-.010)%1)+1)%1, lane, w, ht);
+
+  // 実際の進行方向ベクトル
+  const dx = pos.x - behind.x;
+  const dy = pos.y - behind.y;
+  const moveAngle = Math.atan2(dy, dx);
+
+  // 画面手前側でも馬が逆さまに見えないように、
+  // 「傾き」は保持しつつ、左右はミラーで表現する
+  const faceLeft = dx < 0;
+  const bodyAngle = Math.atan2(dy, Math.abs(dx)); // 常に upright を維持
+
+  const now = performance.now();
+  const gallop = now/90 + idx*0.8 + p*18;
+  const bob = Math.sin(gallop*1.1) * 1.8;
+  const strideA = Math.sin(gallop) * 5.5;
+  const strideB = Math.sin(gallop + Math.PI) * 5.5;
+  const tailSwing = Math.sin(gallop*0.9) * 2.2;
+
+  // 残像
+  for(let t=1; t<=3; t++){
+    const trailPos = getPoint((((p-0.004*t)%1)+1)%1, lane, w, ht);
+    ctx.save();
+    ctx.translate(trailPos.x, trailPos.y + bob*0.5);
+    ctx.rotate(bodyAngle);
+    if(faceLeft) ctx.scale(-1, 1);
+    ctx.globalAlpha = 0.10 - t*0.02;
+    ctx.fillStyle = h.color;
+    ctx.beginPath();
+    ctx.ellipse(-2*t, 0, 17 - t*2.2, 7 - t*0.8, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 芝の跳ねは実進行方向に沿わせる
+  ctx.save();
+  ctx.globalAlpha = 0.16;
+  ctx.fillStyle = "rgba(255,244,220,.95)";
+  for(let d=0; d<3; d++){
+    const back = -18 - d*7 + Math.sin(gallop+d);
+    const spread = 8 + d*2 + Math.cos(gallop+d);
+    ctx.beginPath();
+    ctx.ellipse(
+      pos.x + back*Math.cos(moveAngle) - spread*Math.sin(moveAngle),
+      pos.y + back*Math.sin(moveAngle) + spread*Math.cos(moveAngle),
+      2.2-d*0.3, 1.2, moveAngle, 0, Math.PI*2
+    );
+    ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(pos.x, pos.y + bob);
+  ctx.rotate(bodyAngle);
+  if(faceLeft) ctx.scale(-1, 1);
+
+  // 影
+  ctx.save();
+  ctx.scale(1, .55);
+  ctx.fillStyle = "rgba(0,0,0,.18)";
+  ctx.beginPath();
+  ctx.ellipse(0, 16, 20, 7, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // 尾
+  ctx.strokeStyle = h.color;
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-17, -1);
+  ctx.quadraticCurveTo(-23, -3-tailSwing, -29, -9-tailSwing*1.2);
+  ctx.stroke();
+
+  // 馬体
+  ctx.shadowColor = h.color;
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = h.color;
+
+  // 胴体
+  ctx.beginPath();
+  ctx.moveTo(-18, -4);
+  ctx.quadraticCurveTo(-15, -10, -7, -11);
+  ctx.quadraticCurveTo(6, -12, 17, -7);
+  ctx.quadraticCurveTo(22, -4, 21, 1);
+  ctx.quadraticCurveTo(19, 8, 7, 10);
+  ctx.quadraticCurveTo(-7, 11, -16, 7);
+  ctx.quadraticCurveTo(-21, 4, -18, -4);
+  ctx.fill();
+
+  // 首
+  ctx.beginPath();
+  ctx.moveTo(10, -8);
+  ctx.quadraticCurveTo(17, -15, 22, -17);
+  ctx.quadraticCurveTo(25, -14, 24, -10);
+  ctx.quadraticCurveTo(20, -6, 15, -4);
+  ctx.closePath();
+  ctx.fill();
+
+  // 頭
+  ctx.beginPath();
+  ctx.ellipse(28, -12, 7, 5, 0.10, 0, Math.PI*2);
+  ctx.fill();
+
+  // 鼻先
+  ctx.beginPath();
+  ctx.ellipse(34, -12, 2.8, 2.1, 0.1, 0, Math.PI*2);
+  ctx.fill();
+
+  // 耳
+  ctx.beginPath();
+  ctx.moveTo(28,-16);
+  ctx.lineTo(27,-21);
+  ctx.lineTo(30,-17);
+  ctx.moveTo(24,-16);
+  ctx.lineTo(23,-21);
+  ctx.lineTo(26,-17);
+  ctx.fill();
+
+  // たてがみ
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(255,255,255,.28)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(13,-7);
+  ctx.lineTo(10,-12);
+  ctx.lineTo(16,-10);
+  ctx.lineTo(14,-15);
+  ctx.lineTo(19,-12);
+  ctx.stroke();
+
+  // 騎手
+  ctx.fillStyle = "rgba(255,255,255,.96)";
+  ctx.beginPath();
+  ctx.arc(5, -13, 3, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,.96)";
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(5,-10);
+  ctx.lineTo(2,-4);
+  ctx.lineTo(-1,0);
+  ctx.moveTo(2,-4);
+  ctx.lineTo(9,-1);
+  ctx.stroke();
+
+  // 鞍
+  ctx.fillStyle = "rgba(20,20,24,.72)";
+  ctx.beginPath();
+  ctx.roundRect(0, -2, 8, 6, 2);
+  ctx.fill();
+
+  // 手綱
+  ctx.strokeStyle = "rgba(255,255,255,.82)";
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(8,-6);
+  ctx.lineTo(24,-11);
+  ctx.stroke();
+
+  // 脚（前脚・後脚を関節付きで）
+  ctx.strokeStyle = "rgba(255,255,255,.95)";
+  ctx.lineWidth = 2.3;
+  ctx.lineCap = "round";
+
+  // 後脚1
+  ctx.beginPath();
+  ctx.moveTo(-11, 6);
+  ctx.lineTo(-16, 12 + strideA*0.5);
+  ctx.lineTo(-12, 20 + strideA);
+  ctx.stroke();
+
+  // 後脚2
+  ctx.beginPath();
+  ctx.moveTo(-4, 6);
+  ctx.lineTo(-1, 12 + strideB*0.4);
+  ctx.lineTo(1, 19 + strideB);
+  ctx.stroke();
+
+  // 前脚1
+  ctx.beginPath();
+  ctx.moveTo(8, 5);
+  ctx.lineTo(14, 11 + strideB*0.5);
+  ctx.lineTo(18, 19 + strideB);
+  ctx.stroke();
+
+  // 前脚2
+  ctx.beginPath();
+  ctx.moveTo(14, 4);
+  ctx.lineTo(10, 11 + strideA*0.4);
+  ctx.lineTo(8, 19 + strideA);
+  ctx.stroke();
+
+  ctx.restore();
+
+  // ラベル
+  if(idx < 8 || window.innerWidth > 700){
+    ctx.save();
+    ctx.fillStyle="rgba(5,8,13,.78)";
+    ctx.strokeStyle="rgba(255,255,255,.16)";
+    ctx.lineWidth=1;
+    const text = `${h.number}. ${h.name}`;
+    ctx.font=`bold ${window.innerWidth<600?8:11}px sans-serif`;
+    const tw = ctx.measureText(text).width + 12;
+    ctx.beginPath();
+    ctx.roundRect(pos.x-tw/2,pos.y-38,tw,18,6);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle="#fff";
+    ctx.textAlign="center";
+    ctx.fillText(text,pos.x,pos.y-25);
+    ctx.restore();
+  }
+}
+
+let start = null;
+let lastPhase = -1;
+let raceStarted = false;
+
+function updateText(phase){
+  if(phase === lastPhase) return;
+  lastPhase = phase;
+  chapterEl.textContent = chapters[phase];
+  captionSpans.forEach((s,i)=>s.classList.toggle("active",i===phase));
+  chips.forEach((c,i)=>c.classList.toggle("active",i===phase));
+  paceEl.textContent = paces[phase];
+  keyEl.textContent = keys[phase];
+}
+
+function animate(now){
+  if(!raceStarted || start === null) return;
+  const duration = 44000;
+  const t = Math.min(1, (now-start)/duration);
+  const phase = phaseFromT(t);
+  updateText(phase);
+
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  drawTrack(w,h);
+
+  const states = horses.map((horse,idx)=>({horse,idx,prog:horseProgress(horse,t)}));
+  const sortedStates = [...states].sort((a,b)=>a.prog-b.prog);
+  sortedStates.forEach(s=>drawHorse(s.horse,s.prog,s.idx,w,h));
+
+  const leaderProg = Math.max(...states.map(s=>s.prog));
+  const GOAL_ABS = 1.22;
+  const crossedGoal = leaderProg >= GOAL_ABS;
+
+  // ranking top 5 by progress
+  const ranks = [...states].sort((a,b)=>b.prog-a.prog).slice(0,5);
+  rankingEl.innerHTML = ranks.map((r,i)=>`
+    <div class="rank-item">
+      <span class="rank-no">${i+1}</span>
+      <span class="silk" style="background:${r.horse.color}"></span>
+      <span>${r.horse.number}. ${r.horse.name}</span>
+    </div>`).join("");
+
+  const finalRanks = [...states].sort((a,b)=>b.prog-a.prog).slice(0,10);
+  resultsListEl.innerHTML = finalRanks.map((r,i)=>`
+    <div class="result-item">
+      <span class="result-rank">${i+1}</span>
+      <span class="silk" style="background:${r.horse.color}"></span>
+      <span class="result-name">${r.horse.number}. ${r.horse.name}</span>
+    </div>`).join("");
+
+  // show zoom from the hill / final straight
+  const showZoom = t >= 0.72;
+  zoomPanelEl.classList.toggle("show", showZoom);
+  if(showZoom){
+    drawFinishZoom(states, t);
+  }
+
+  // results should only show after actual goal
+  resultsPanelEl.classList.toggle("show", crossedGoal);
+
+  // callout text should not say goal before the leader actually reaches goal
+  if(phase < 6){
+    callout.textContent = callouts[phase];
+  } else {
+    callout.textContent = crossedGoal ? "ゴールイン！想定着順を表示" : "⑤が⑯を捕らえにかかる";
+  }
+
+  if(t < 1) requestAnimationFrame(animate);
+}
+const introScreen = document.getElementById("introScreen");
+const startRaceBtn = document.getElementById("startRaceBtn");
+
+function startRace(){
+  if(raceStarted) return;
+  raceStarted = true;
+
+  // iPhone Safari sometimes reports stale canvas sizes while the intro overlay is visible.
+  // Hide first, then resize once immediately and once shortly after.
+  if(introScreen){
+    introScreen.classList.add("hide");
+    introScreen.style.display = "none";
+  }
+
+  try { resize(); resizeZoom(); } catch(e) {}
+  setTimeout(()=>{ try { resize(); resizeZoom(); } catch(e) {} }, 120);
+
+  start = performance.now();
+  requestAnimationFrame(animate);
+}
+
+// Expose a direct fallback for inline onclick/ontouchend on iPhone/Safari.
+window.forceStartRace = startRace;
+
+function bindStartButton(){
+  if(!startRaceBtn) return;
+  const handler = function(e){
+    if(e && e.cancelable) e.preventDefault();
+    startRace();
+    return false;
+  };
+  ["click","pointerup","touchend","mousedown"].forEach(function(ev){
+    try { startRaceBtn.addEventListener(ev, handler, {passive:false}); }
+    catch(err) { startRaceBtn.addEventListener(ev, handler, false); }
+  });
+}
+
+bindStartButton();
+initImporter();
+
+
+// ===== iOS / mobile stability helpers =====
+(function(){
+  // Older WebViews may not support CanvasRenderingContext2D.roundRect.
+  if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      if (typeof r === 'number') r = {tl:r,tr:r,br:r,bl:r};
+      else r = Object.assign({tl:0,tr:0,br:0,bl:0}, r || {});
+      this.beginPath();
+      this.moveTo(x + r.tl, y);
+      this.lineTo(x + w - r.tr, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+      this.lineTo(x + w, y + h - r.br);
+      this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+      this.lineTo(x + r.bl, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+      this.lineTo(x, y + r.tl);
+      this.quadraticCurveTo(x, y, x + r.tl, y);
+      this.closePath();
+      return this;
+    };
+  }
+  function setVh(){
+    document.documentElement.style.setProperty('--real-vh', `${window.innerHeight * 0.01}px`);
+    const app = document.getElementById('app');
+    if(app) app.style.height = `calc(var(--real-vh) * 100)`;
+  }
+  setVh();
+  window.addEventListener('resize', ()=>{ setVh(); setTimeout(()=>{ try{ resize(); resizeZoom(); }catch(e){} }, 80); }, {passive:true});
+  window.addEventListener('orientationchange', ()=>{ setVh(); setTimeout(()=>{ try{ resize(); resizeZoom(); }catch(e){} }, 320); }, {passive:true});
+})();
+
+</script>
+</body>
+</html>
