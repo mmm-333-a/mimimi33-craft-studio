@@ -1187,6 +1187,14 @@ button, .start-race{
   .rank-item{font-size:8px !important;}
 }
 
+
+/* ===== r5: 2.5D COURSE / UPRIGHT HORSE LAYERS ===== */
+.scene{perspective:none !important;}
+.track3d{transform:none !important;inset:0 !important;background:transparent !important;border:0 !important;box-shadow:none !important;}
+.track3d canvas,#race{position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;border-radius:20px !important;}
+#track{z-index:1;pointer-events:none;}
+#race{z-index:2;pointer-events:none;}
+
 </style>
 </head>
 <body>
@@ -1374,8 +1382,9 @@ button, .start-race{
 
   <div class="scene">
     <div class="track3d">
-      <canvas id="race"></canvas>
+      <canvas id="track"></canvas>
     </div>
+    <canvas id="race"></canvas>
   </div>
 
   <div class="callout" id="callout">⑯メイショウタバルが主導権</div>
@@ -1408,6 +1417,8 @@ button, .start-race{
 <script id="embeddedRosterData" type="application/json">{}</script>
 <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
+// r5: course/horse layers split; 2.5D perspective projection; upright depth-scaled horses.
+
 
 // ===== Compatibility first: must run before any canvas drawing =====
 (function(){
@@ -1907,6 +1918,8 @@ function initImporter(){
 }
 
 
+const trackCanvas = document.getElementById("track");
+const trackCtx = trackCanvas.getContext("2d");
 const canvas = document.getElementById("race");
 const ctx = canvas.getContext("2d");
 const rankingEl = document.getElementById("ranking");
@@ -1943,6 +1956,11 @@ function resize(){
   canvas.style.width = rect.width+"px";
   canvas.style.height = rect.height+"px";
   ctx.setTransform(dpr,0,0,dpr,0,0);
+  trackCanvas.width = Math.floor(rect.width * dpr);
+  trackCanvas.height = Math.floor(rect.height * dpr);
+  trackCanvas.style.width = rect.width+"px";
+  trackCanvas.style.height = rect.height+"px";
+  trackCtx.setTransform(dpr,0,0,dpr,0,0);
 }
 window.addEventListener("resize", resize);
 resize();
@@ -2172,7 +2190,15 @@ function buildCoursePath(w, h){
   const key = `${Math.round(w)}x${Math.round(h)}`;
   if(courseCache.key === key) return courseCache;
 
-  const P = (x, y) => ({ x: w*x, y: h*y });
+  // r5: ground-plane perspective. Far side is narrower and vertically compressed.
+  const P = (x, y) => {
+    const d = Math.max(0, Math.min(1, (y - 0.12) / 0.66));
+    const sx = 0.70 + 0.34*d;
+    const px = 0.50 + (x - 0.50) * sx;
+    const ny = Math.max(0, Math.min(1, (y - 0.12) / 0.66));
+    const py = 0.13 + Math.pow(ny, 1.18) * 0.74;
+    return { x: w*px, y: h*py };
+  };
   const segments = [
     // S (right-lower) -> G (left-lower) : home straight, moving left
     [P(0.73,0.72), P(0.64,0.72), P(0.44,0.72), P(0.26,0.72)],
@@ -2240,8 +2266,9 @@ function getPoint(progress, lane, w, h){
   const ny = dx / mag;
 
   // lane offset
-  const lanePx = lane * 24;
-  return { x: x + nx * lanePx, y: y + ny * lanePx };
+  const depth = Math.max(0, Math.min(1, y / Math.max(1,h)));
+  const lanePx = lane * (16 + 22*depth);
+  return { x: x + nx * lanePx, y: y + ny * lanePx, depth };
 }
 
 function phaseFromT(t){
@@ -2278,44 +2305,44 @@ function horseProgress(h, t){
 }
 
 function drawTrack(w,h){
-  ctx.clearRect(0,0,w,h);
+  trackCtx.clearRect(0,0,w,h);
   const cache = buildCoursePath(w, h);
   const pts = cache.points;
 
   // grass field
-  ctx.fillStyle = "rgba(24,78,36,.82)";
-  ctx.fillRect(0, 0, w, h);
+  trackCtx.fillStyle = "rgba(24,78,36,.82)";
+  trackCtx.fillRect(0, 0, w, h);
 
   // infield polygon to evoke the triangular interior of the uploaded course diagram
-  ctx.fillStyle = "rgba(255,255,255,.10)";
-  ctx.beginPath();
-  ctx.moveTo(w*0.31, h*0.65);
-  ctx.quadraticCurveTo(w*0.15, h*0.60, w*0.17, h*0.48);
-  ctx.quadraticCurveTo(w*0.20, h*0.37, w*0.34, h*0.35);
-  ctx.quadraticCurveTo(w*0.50, h*0.28, w*0.62, h*0.23);
-  ctx.quadraticCurveTo(w*0.69, h*0.20, w*0.73, h*0.27);
-  ctx.quadraticCurveTo(w*0.76, h*0.38, w*0.70, h*0.56);
-  ctx.quadraticCurveTo(w*0.66, h*0.64, w*0.51, h*0.66);
-  ctx.quadraticCurveTo(w*0.42, h*0.67, w*0.31, h*0.65);
-  ctx.closePath();
-  ctx.fill();
+  trackCtx.fillStyle = "rgba(255,255,255,.10)";
+  trackCtx.beginPath();
+  trackCtx.moveTo(w*0.31, h*0.65);
+  trackCtx.quadraticCurveTo(w*0.15, h*0.60, w*0.17, h*0.48);
+  trackCtx.quadraticCurveTo(w*0.20, h*0.37, w*0.34, h*0.35);
+  trackCtx.quadraticCurveTo(w*0.50, h*0.28, w*0.62, h*0.23);
+  trackCtx.quadraticCurveTo(w*0.69, h*0.20, w*0.73, h*0.27);
+  trackCtx.quadraticCurveTo(w*0.76, h*0.38, w*0.70, h*0.56);
+  trackCtx.quadraticCurveTo(w*0.66, h*0.64, w*0.51, h*0.66);
+  trackCtx.quadraticCurveTo(w*0.42, h*0.67, w*0.31, h*0.65);
+  trackCtx.closePath();
+  trackCtx.fill();
 
   function strokePath(offset, width, color, alpha=1){
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.beginPath();
+    trackCtx.save();
+    trackCtx.globalAlpha = alpha;
+    trackCtx.strokeStyle = color;
+    trackCtx.lineWidth = width;
+    trackCtx.lineJoin = "round";
+    trackCtx.lineCap = "round";
+    trackCtx.beginPath();
     pts.forEach((_, i) => {
       const p = getPoint(i/(pts.length-1), offset/24, w, h);
-      if(i===0) ctx.moveTo(p.x, p.y);
-      else ctx.lineTo(p.x, p.y);
+      if(i===0) trackCtx.moveTo(p.x, p.y);
+      else trackCtx.lineTo(p.x, p.y);
     });
-    ctx.closePath();
-    ctx.stroke();
-    ctx.restore();
+    trackCtx.closePath();
+    trackCtx.stroke();
+    trackCtx.restore();
   }
 
   // outer turf ribbon similar to reference illustration
@@ -2335,22 +2362,22 @@ function drawTrack(w,h){
   const goalP = getPoint(0.23, -0.30, w, h);
 
   function drawPin(p, color, letter){
-    ctx.save();
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y-18, 14, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y+16);
-    ctx.lineTo(p.x-10, p.y-6);
-    ctx.lineTo(p.x+10, p.y-6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#fff";
-    ctx.font = "900 22px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(letter, p.x, p.y-11);
-    ctx.restore();
+    trackCtx.save();
+    trackCtx.fillStyle = color;
+    trackCtx.beginPath();
+    trackCtx.arc(p.x, p.y-18, 14, 0, Math.PI*2);
+    trackCtx.fill();
+    trackCtx.beginPath();
+    trackCtx.moveTo(p.x, p.y+16);
+    trackCtx.lineTo(p.x-10, p.y-6);
+    trackCtx.lineTo(p.x+10, p.y-6);
+    trackCtx.closePath();
+    trackCtx.fill();
+    trackCtx.fillStyle = "#fff";
+    trackCtx.font = "900 22px sans-serif";
+    trackCtx.textAlign = "center";
+    trackCtx.fillText(letter, p.x, p.y-11);
+    trackCtx.restore();
   }
   drawPin(goalP, "#456ad3", "G");
   drawPin(startP, "#f39a3a", "S");
@@ -2365,21 +2392,21 @@ function drawTrack(w,h){
   ];
   markers.forEach(m => {
     const p = getPoint(m.t, 0.70, w, h);
-    ctx.save();
-    ctx.fillStyle = "#fff";
-    ctx.strokeStyle = "#cc4d4d";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 10, 0, Math.PI*2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#cc4d4d";
-    ctx.font = "bold 11px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(m.n, p.x, p.y+4);
-    ctx.fillStyle = "#b34a4a";
-    ctx.fillRect(p.x-2, p.y+10, 4, 12);
-    ctx.restore();
+    trackCtx.save();
+    trackCtx.fillStyle = "#fff";
+    trackCtx.strokeStyle = "#cc4d4d";
+    trackCtx.lineWidth = 2;
+    trackCtx.beginPath();
+    trackCtx.arc(p.x, p.y, 10, 0, Math.PI*2);
+    trackCtx.fill();
+    trackCtx.stroke();
+    trackCtx.fillStyle = "#cc4d4d";
+    trackCtx.font = "bold 11px sans-serif";
+    trackCtx.textAlign = "center";
+    trackCtx.fillText(m.n, p.x, p.y+4);
+    trackCtx.fillStyle = "#b34a4a";
+    trackCtx.fillRect(p.x-2, p.y+10, 4, 12);
+    trackCtx.restore();
   });
 
   // goal line explicitly on home straight near G
@@ -2387,22 +2414,22 @@ function drawTrack(w,h){
   const g2 = getPoint(0.22, -0.50, w, h);
   const ga = Math.atan2(g2.y - g1.y, g2.x - g1.x);
   const glen = Math.hypot(g2.x - g1.x, g2.y - g1.y);
-  ctx.save();
-  ctx.translate((g1.x+g2.x)/2, (g1.y+g2.y)/2);
-  ctx.rotate(ga);
+  trackCtx.save();
+  trackCtx.translate((g1.x+g2.x)/2, (g1.y+g2.y)/2);
+  trackCtx.rotate(ga);
   const seg = 8;
   for(let i=0; i<glen/seg; i++){
-    ctx.fillStyle = i%2===0 ? "rgba(255,255,255,.96)" : "rgba(20,20,20,.85)";
-    ctx.fillRect(-glen/2 + i*seg, -4, seg, 8);
+    trackCtx.fillStyle = i%2===0 ? "rgba(255,255,255,.96)" : "rgba(20,20,20,.85)";
+    trackCtx.fillRect(-glen/2 + i*seg, -4, seg, 8);
   }
-  ctx.restore();
+  trackCtx.restore();
 
   // subtle course caption
-  ctx.fillStyle = "rgba(255,255,255,.16)";
-  ctx.font = `900 ${Math.max(18, w*.026)}px sans-serif`;
-  ctx.textAlign = "center";
-  ctx.fillText("HANSHIN TURF 2200m / INNER COURSE", w*0.52, h*0.84);
-  ctx.textAlign = "left";
+  trackCtx.fillStyle = "rgba(255,255,255,.16)";
+  trackCtx.font = `900 ${Math.max(18, w*.026)}px sans-serif`;
+  trackCtx.textAlign = "center";
+  trackCtx.fillText("HANSHIN TURF 2200m / INNER COURSE", w*0.52, h*0.84);
+  trackCtx.textAlign = "left";
 }
 
 function drawHorse(h, p, idx, w, ht, raceT){
@@ -2462,24 +2489,28 @@ function drawHorse(h, p, idx, w, ht, raceT){
   }
   ctx.restore();
 
-  ctx.save();
-  ctx.translate(pos.x, pos.y + bob);
-  ctx.rotate(bodyAngle);
-  if(faceLeft) ctx.scale(-1, 1);
+  // r5: horse stays upright on a separate overlay. Perspective is expressed by size, not by flattening.
+  const depth = Math.max(0, Math.min(1, pos.y / Math.max(1, ht)));
+  const depthScale = 0.70 + 0.48*depth;
 
-  // track3d の rotateX で馬体まで平たく見えるため、馬体だけ縦方向を補正する。
-  // コース面に寝ている印象を抑え、脚が芝面へ下りる見え方にする。
-  const uprightY = (window.matchMedia && window.matchMedia("(orientation: landscape)").matches) ? 1.48 : 1.34;
-  ctx.scale(1, uprightY);
-
-  // 影
+  // Contact shadow is drawn on the ground plane before rotating the horse body.
   ctx.save();
-  ctx.scale(1, .55);
-  ctx.fillStyle = "rgba(0,0,0,.18)";
+  ctx.globalAlpha = 0.26;
+  ctx.fillStyle = "rgba(0,0,0,.72)";
   ctx.beginPath();
-  ctx.ellipse(0, 16, 20, 7, 0, 0, Math.PI*2);
+  ctx.ellipse(pos.x, pos.y + 15*depthScale, 23*depthScale, 6.5*depthScale, moveAngle, 0, Math.PI*2);
   ctx.fill();
   ctx.restore();
+
+  ctx.save();
+  ctx.translate(pos.x, pos.y + bob*depthScale - 8*depthScale);
+  // Keep the horse visually standing; follow course tangent only partially.
+  const visualAngle = Math.max(-0.48, Math.min(0.48, bodyAngle*0.58));
+  ctx.rotate(visualAngle);
+  if(faceLeft) ctx.scale(-1, 1);
+  ctx.scale(depthScale, depthScale);
+
+  // 接地影は馬体変形前に地面レイヤーとして描画済み
 
   // 尾
   ctx.strokeStyle = h.color;
@@ -2663,9 +2694,15 @@ function animate(now){
   const rect = canvas.parentElement.getBoundingClientRect();
   const w = rect.width, h = rect.height;
   drawTrack(w,h);
+  ctx.clearRect(0,0,w,h);
 
   const states = horses.map((horse,idx)=>({horse,idx,prog:horseProgress(horse,t)}));
-  const sortedStates = [...states].sort((a,b)=>a.prog-b.prog);
+  // r5: draw far horses first, near horses last for natural occlusion.
+  const sortedStates = [...states].sort((a,b)=>{
+    const pa=getPoint(((a.prog%1)+1)%1,horseLane(a.horse,t),w,h);
+    const pb=getPoint(((b.prog%1)+1)%1,horseLane(b.horse,t),w,h);
+    return pa.y-pb.y;
+  });
   sortedStates.forEach(s=>drawHorse(s.horse,s.prog,s.idx,w,h,t));
 
   const leaderProg = Math.max(...states.map(s=>s.prog));
