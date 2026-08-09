@@ -1169,10 +1169,29 @@ button, .start-race{
   .review-table{max-height:250px}.import-status,.review-note,.import-warning{font-size:8.5px}
 }
 
+
+
+/* ===== r4: landscape race-view improvements ===== */
+.landscape-hint{display:none}
+@media (max-width:768px) and (orientation:portrait){
+  .landscape-hint{
+    display:block;position:absolute;z-index:95;left:50%;top:72px;transform:translateX(-50%);
+    padding:6px 10px;border-radius:999px;background:rgba(5,8,13,.92);
+    border:1px solid rgba(216,185,104,.42);color:#f1d78c;font-size:10px;font-weight:800;
+    white-space:nowrap;pointer-events:none;
+  }
+}
+@media (max-width:932px) and (orientation:landscape){
+  .scene{inset:42px 6px 112px 6px !important;}
+  .ranking{width:250px !important;}
+  .rank-item{font-size:8px !important;}
+}
+
 </style>
 </head>
 <body>
 <div id="app">
+  <div class="landscape-hint">↻ 横向き表示推奨：横並び・追い抜きが見やすくなります</div>
 
   <div class="intro-screen" id="introScreen">
     <div class="intro-card">
@@ -1433,7 +1452,7 @@ const horses = [
 ];
 
 // ===== Phase 1: JRA screenshot OCR importer =====
-const originalHorseSnapshot = horses.map(h => ({...h, surge:[...h.surge]}));
+const originalHorseSnapshot = horses.map(h => ({...h, surge:[...h.surge], lanePhases:Array.isArray(h.lanePhases)?[...h.lanePhases]:undefined}));
 const originalJockeys = {
   1:"戸崎圭太",2:"D. レーン",3:"吉村誠之助",4:"丹内祐次",5:"北村友一",6:"西村淳也",7:"幸英明",8:"高杉吏麒",9:"横山武史",
   10:"松山弘平",11:"坂井瑠星",12:"川田将雅",13:"古川吉洋",14:"岩田望来",15:"横山典弘",16:"武豊",17:"C. ルメール",18:"松本大輝"
@@ -1741,10 +1760,10 @@ function genericizePredictionUi(count){
   for(let i=0;i<7;i++){ chapters[i]=genericChapters[i]; keys[i]=genericKeys[i]; callouts[i]=genericCallouts[i]; }
   const genericCaptions=[
     '出走馬・騎手は読み込み済みです。第一段階では脚質やスタート直後の位置取りを判定しません。',
-    '現在の馬の動きは既存HTMLの馬番別モーションを仮流用しています。実際の先行・差し関係を示すものではありません。',
+    '現在の前後差は既存HTMLの馬番別モーションを仮流用し、横方向は見やすさのため仮レーン移動を加えています。実際の先行・差し関係を示すものではありません。',
     'ペース想定は未設定です。第二段階で各馬の脚質や過去走を基に展開ロジックを作る想定です。',
     '仕掛け位置は未設定です。ここでは表示確認用のアニメーションとして進行します。',
-    '3〜4角の位置取りも未設定です。読み込んだ馬名・騎手が正しく反映されているかを確認してください。',
+    '3〜4角では表示確認用にレーン移動します。横並びや追い抜きの見え方を確認するための仮動作で、位置取り予想ではありません。',
     '直線の伸び・評価はまだ予想ではありません。既存モーションの仮表示です。',
     '表示される順番は予想着順ではありません。第一段階の目的は出走馬データの置換確認です。'
   ];
@@ -1753,12 +1772,28 @@ function genericizePredictionUi(count){
   const courseList=document.querySelector('.coursebox-list'); if(courseList) courseList.innerHTML='<div>出走馬・騎手 <b>反映済み</b></div><div>脚質 <b>未設定</b></div><div>位置取り <b>未設定</b></div><div>展開予想 <b>未設定</b></div><div>想定着順 <b>未設定</b></div>';
 }
 
+function buildImportedLanePhases(idx,count){
+  // 表示確認用の仮レーン。脚質予想ではない。
+  // 序盤は3～4列に分散し、中盤以降に内外へ持ち出して横並び・追い抜きが見えるようにする。
+  const slots=[-0.72,-0.38,-0.08,0.24,0.56,0.76];
+  const start=slots[idx % slots.length];
+  const group=Math.floor(idx/slots.length);
+  const gShift=group ? 0.08 : -0.04;
+  const dir=(idx%2===0)?1:-1;
+  const mid=Math.max(-0.78,Math.min(0.78,start + dir*0.18 + gShift));
+  const move=Math.max(-0.82,Math.min(0.82,mid + dir*0.22));
+  const corner=Math.max(-0.82,Math.min(0.82,move - dir*0.12));
+  const straight=Math.max(-0.82,Math.min(0.82,corner + ((idx%3)-1)*0.20));
+  const finish=Math.max(-0.82,Math.min(0.82,straight + (idx%4<2?0.10:-0.10)));
+  return [start,start*0.92,mid,move,corner,straight,finish];
+}
+
 function applyImportedRows(rows, persist=true){
   const err=validateRows(rows); if(err){setOcrStatus(err,'error');return false;}
   const profiles=originalHorseSnapshot;
   const newHorses=rows.map((r,idx)=>{
     const p=profiles.find(x=>x.number===r.number) || profiles[idx % profiles.length];
-    return {...p, number:r.number, name:r.name, role:'未設定', surge:[...p.surge]};
+    return {...p, number:r.number, name:r.name, role:'未設定', lanePhases:buildImportedLanePhases(idx,rows.length), surge:[...p.surge]};
   });
   horses.splice(0,horses.length,...newHorses);
   jockeysByNumber={}; rows.forEach(r=>jockeysByNumber[r.number]=r.jockey||'');
@@ -1837,7 +1872,7 @@ function saveImportedHtml(){
 }
 
 function restoreDefaultRoster(){
-  horses.splice(0,horses.length,...originalHorseSnapshot.map(h=>({...h,surge:[...h.surge]})));
+  horses.splice(0,horses.length,...originalHorseSnapshot.map(h=>({...h,surge:[...h.surge],lanePhases:Array.isArray(h.lanePhases)?[...h.lanePhases]:undefined})));
   jockeysByNumber={...originalJockeys}; importedMode=false; lastImportedRows=[];
   try{localStorage.removeItem('jraRaceFlowImportedRows')}catch(e){}
   location.reload();
@@ -2219,6 +2254,18 @@ function phaseFromT(t){
   return 6;
 }
 function smoothstep(x){return x*x*(3-2*x)}
+function phaseLocalT(t){
+  const ph=phaseFromT(t);
+  const bounds=[0,.12,.28,.44,.60,.76,.92,1];
+  return {ph, local:Math.max(0,Math.min(1,(t-bounds[ph])/(bounds[ph+1]-bounds[ph])))};
+}
+function horseLane(h,t){
+  if(!Array.isArray(h.lanePhases) || !h.lanePhases.length) return h.lane || 0;
+  const {ph,local}=phaseLocalT(t);
+  const a=h.lanePhases[Math.min(ph,h.lanePhases.length-1)];
+  const b=h.lanePhases[Math.min(ph+1,h.lanePhases.length-1)];
+  return a*(1-smoothstep(local))+b*smoothstep(local);
+}
 function horseProgress(h, t){
   const ph = phaseFromT(t);
   let s = h.base + h.surge[ph];
@@ -2358,10 +2405,12 @@ function drawTrack(w,h){
   ctx.textAlign = "left";
 }
 
-function drawHorse(h, p, idx, w, ht){
-  const lane = h.lane;
+function drawHorse(h, p, idx, w, ht, raceT){
+  const lane = horseLane(h, raceT);
+  const prevT = Math.max(0, raceT - 0.006);
+  const behindLane = horseLane(h, prevT);
   const pos = getPoint(((p%1)+1)%1, lane, w, ht);
-  const behind = getPoint((((p-.010)%1)+1)%1, lane, w, ht);
+  const behind = getPoint((((p-.010)%1)+1)%1, behindLane, w, ht);
 
   // 実際の進行方向ベクトル
   const dx = pos.x - behind.x;
@@ -2382,7 +2431,8 @@ function drawHorse(h, p, idx, w, ht){
 
   // 残像
   for(let t=1; t<=3; t++){
-    const trailPos = getPoint((((p-0.004*t)%1)+1)%1, lane, w, ht);
+    const trailLane = horseLane(h, Math.max(0,raceT-0.008*t));
+    const trailPos = getPoint((((p-0.004*t)%1)+1)%1, trailLane, w, ht);
     ctx.save();
     ctx.translate(trailPos.x, trailPos.y + bob*0.5);
     ctx.rotate(bodyAngle);
@@ -2416,6 +2466,11 @@ function drawHorse(h, p, idx, w, ht){
   ctx.translate(pos.x, pos.y + bob);
   ctx.rotate(bodyAngle);
   if(faceLeft) ctx.scale(-1, 1);
+
+  // track3d の rotateX で馬体まで平たく見えるため、馬体だけ縦方向を補正する。
+  // コース面に寝ている印象を抑え、脚が芝面へ下りる見え方にする。
+  const uprightY = (window.matchMedia && window.matchMedia("(orientation: landscape)").matches) ? 1.48 : 1.34;
+  ctx.scale(1, uprightY);
 
   // 影
   ctx.save();
@@ -2557,21 +2612,29 @@ function drawHorse(h, p, idx, w, ht){
 
   ctx.restore();
 
-  // ラベル
-  if(idx < 8 || window.innerWidth > 700){
+  // ラベル：横画面または読み込みモードでは全頭表示。
+  // 3段に少しずらし、密集時の完全な重なりを減らす。
+  const landscape = window.matchMedia && window.matchMedia("(orientation: landscape)").matches;
+  if(importedMode || landscape || idx < 8){
     ctx.save();
-    ctx.fillStyle="rgba(5,8,13,.78)";
-    ctx.strokeStyle="rgba(255,255,255,.16)";
+    ctx.fillStyle="rgba(5,8,13,.86)";
+    ctx.strokeStyle=h.color;
     ctx.lineWidth=1;
     const text = `${h.number}. ${h.name}`;
-    ctx.font=`bold ${window.innerWidth<600?8:11}px sans-serif`;
+    ctx.font=`bold ${window.innerWidth<600?8:10}px sans-serif`;
     const tw = ctx.measureText(text).width + 12;
+    const tier = idx % 3;
+    const labelY = pos.y - 36 - tier*13;
     ctx.beginPath();
-    ctx.roundRect(pos.x-tw/2,pos.y-38,tw,18,6);
+    ctx.moveTo(pos.x,pos.y-18);
+    ctx.lineTo(pos.x,labelY+17);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(pos.x-tw/2,labelY,tw,18,6);
     ctx.fill(); ctx.stroke();
     ctx.fillStyle="#fff";
     ctx.textAlign="center";
-    ctx.fillText(text,pos.x,pos.y-25);
+    ctx.fillText(text,pos.x,labelY+13);
     ctx.restore();
   }
 }
@@ -2603,7 +2666,7 @@ function animate(now){
 
   const states = horses.map((horse,idx)=>({horse,idx,prog:horseProgress(horse,t)}));
   const sortedStates = [...states].sort((a,b)=>a.prog-b.prog);
-  sortedStates.forEach(s=>drawHorse(s.horse,s.prog,s.idx,w,h));
+  sortedStates.forEach(s=>drawHorse(s.horse,s.prog,s.idx,w,h,t));
 
   const leaderProg = Math.max(...states.map(s=>s.prog));
   const GOAL_ABS = 1.22;
@@ -2618,7 +2681,8 @@ function animate(now){
       <span>${r.horse.number}. ${r.horse.name}</span>
     </div>`).join("");
 
-  const finalRanks = [...states].sort((a,b)=>b.prog-a.prog).slice(0,10);
+  const allFinalRanks = [...states].sort((a,b)=>b.prog-a.prog);
+  const finalRanks = importedMode ? allFinalRanks : allFinalRanks.slice(0,10);
   resultsListEl.innerHTML = finalRanks.map((r,i)=>`
     <div class="result-item">
       <span class="result-rank">${i+1}</span>
