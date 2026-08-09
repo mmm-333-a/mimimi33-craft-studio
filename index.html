@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v12.3</title>
+<title>ビーズ設計スタジオ v12.4</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1657,6 +1657,39 @@ select#candidateLimit{
   background:rgba(255,255,255,.72)!important;
 }
 
+
+/* =========================================================
+   v12.4 SVG bead renderer — one material system for all shapes
+   ========================================================= */
+.bead.svg-rendered{
+  background:none!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:visible;
+}
+.bead.svg-rendered::before,
+.bead.svg-rendered::after{
+  content:none!important;
+  display:none!important;
+}
+.bead.svg-rendered > svg.bead-svg{
+  display:block;
+  width:100%;
+  height:100%;
+  overflow:visible;
+  pointer-events:none;
+}
+.bead.svg-rendered.shape-oval{
+  width:calc(var(--bead-base-w, 1) * 1px);
+}
+.bead.svg-rendered .bead-glass-highlight{
+  mix-blend-mode:screen;
+}
+
 </style>
 </head>
 <body>
@@ -1689,7 +1722,7 @@ select#candidateLimit{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v12.3</h1>
+      <h1>ビーズ設計スタジオ v12.4</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -3756,67 +3789,101 @@ select#candidateLimit{
     return set.size;
   }
 
-  function makeBead(b,index,mode="line"){
+
+  let beadSvgUid=0;
+
+  function svgShapeElement(shape,fillRef,stroke,strokeWidth,fillOpacity){
+    const common=`fill="${fillRef}" fill-opacity="${fillOpacity}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round"`;
+    if(shape==="oval"){
+      return `<ellipse cx="50" cy="50" rx="43" ry="28" ${common}/>`;
+    }
+    if(shape==="star"){
+      return `<polygon points="50,7 61,36 92,37 67,56 76,87 50,69 24,87 33,56 8,37 39,36" ${common}/>`;
+    }
+    if(shape==="heart"){
+      return `<path d="M50 87 C44 80 14 61 14 37 C14 20 34 14 50 31 C66 14 86 20 86 37 C86 61 56 80 50 87 Z" ${common}/>`;
+    }
+    if(shape==="diamond"){
+      return `<polygon points="50,8 91,50 50,92 9,50" ${common}/>`;
+    }
+    return `<circle cx="50" cy="50" r="41" ${common}/>`;
+  }
+
+  function svgHighlightElement(shape,opacity){
+    const op=opacity==="clear"?.90:opacity==="semi"?.72:.48;
+    if(shape==="oval"){
+      return `<ellipse class="bead-glass-highlight" cx="35" cy="36" rx="16" ry="8" fill="white" opacity="${op}" transform="rotate(-18 35 36)"/>`;
+    }
+    if(shape==="star"){
+      return `<path class="bead-glass-highlight" d="M31 39 Q45 25 58 31" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" opacity="${op}"/>`;
+    }
+    if(shape==="heart"){
+      return `<path class="bead-glass-highlight" d="M27 39 C30 27 42 25 48 34" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" opacity="${op}"/>`;
+    }
+    if(shape==="diamond"){
+      return `<path class="bead-glass-highlight" d="M28 48 L49 26 L62 39" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="${op}"/>`;
+    }
+    return `<ellipse class="bead-glass-highlight" cx="35" cy="33" rx="13" ry="8" fill="white" opacity="${op}" transform="rotate(-28 35 33)"/>`;
+  }
+
+  function beadSvgMarkup(b){
     const shape=b.shape||"round";
     const opacity=b.opacity||"opaque";
     const color=String(b.color||"#FFFFFF").toUpperCase();
     const colorless=isColorlessClear(color,opacity);
+    const uid=`beadGrad${++beadSvgUid}`;
+    const base=colorless?"#DDEBF0":color;
+    const edge=colorless?"#7E9CAA":darkenHex(color,opacity==="clear"?.14:.20);
 
-    // 色付き透明は色相を残す。無色クリアだけは白〜青灰のガラス表現。
-    const alpha=opacityAlpha(opacity);
-    const fillAlpha=colorless?.13:alpha;
-    const visualColor=hexToRgba(color,fillAlpha);
-    const outlineColor=colorless
-      ?"rgba(99,135,151,.62)"
-      :hexToRgba(darkenHex(color,opacity==="clear"?.18:.24),opacity==="clear"?.88:.78);
+    // 色を残したまま、材質差は内部濃度・輪郭・反射で表現する。
+    const fillOpacity=colorless?.22:opacity==="clear"?.54:opacity==="semi"?.78:.98;
+    const strokeOpacity=opacity==="clear"?.92:opacity==="semi"?.82:.72;
+    const strokeWidth=opacity==="clear"?4.2:opacity==="semi"?3.4:2.4;
+    const lightStop=opacity==="opaque"?.20:opacity==="semi"?.34:.44;
 
+    const shapeEl=svgShapeElement(
+      shape,
+      `url(#${uid})`,
+      hexToRgba(edge,strokeOpacity),
+      strokeWidth,
+      fillOpacity
+    );
+
+    return `<svg class="bead-svg" viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <radialGradient id="${uid}" cx="30%" cy="25%" r="78%">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="${lightStop}"/>
+          <stop offset="28%" stop-color="${base}" stop-opacity=".98"/>
+          <stop offset="72%" stop-color="${base}" stop-opacity=".92"/>
+          <stop offset="100%" stop-color="${edge}" stop-opacity="${opacity==="opaque"?.92:.74}"/>
+        </radialGradient>
+      </defs>
+      ${shapeEl}
+      ${svgHighlightElement(shape,opacity)}
+    </svg>`;
+  }
+
+  function makeBead(b,index,mode="line"){
+    const shape=b.shape||"round";
+    const opacity=b.opacity||"opaque";
     const el=document.createElement("div");
+
     if(mode==="u"){
       const sc=uScale==="mid"?" scale-mid":uScale==="big"?" scale-big":"";
-      el.className=`bead u-${b.size}${sc} abs design-item shape-${shape} opacity-${opacity}`;
+      el.className=`bead svg-rendered u-${b.size}${sc} abs design-item shape-${shape} opacity-${opacity}`;
     }else{
-      el.className=`bead ${cls[b.size]} design-item shape-${shape} opacity-${opacity}`;
+      el.className=`bead svg-rendered ${cls[b.size]} design-item shape-${shape} opacity-${opacity}`;
     }
 
-    el.style.setProperty("--shape-color",visualColor);
-    el.style.setProperty("--glass-fill",visualColor);
-    el.style.setProperty("--glass-outline",outlineColor);
-
-    if(shape==="round"){
-      el.style.backgroundColor=visualColor;
-      if(opacity!=="opaque"){
-        el.style.borderColor=outlineColor;
-      }
-    }else{
-      // 丸以外は親の丸ベースを持たない。
-      el.style.backgroundColor="transparent";
-      el.style.border="0";
-      el.style.boxShadow="none";
+    // 楕円だけ横長。既存サイズ感を大きく変えない。
+    if(shape==="oval"){
+      const widths={s:"28px",m:"40px",l:"56px"};
+      el.style.width=widths[b.size]||"40px";
     }
 
-    if(shape==="star"||shape==="heart"||shape==="diamond"){
-      el.style.backgroundColor="transparent";
-
-      if(opacity==="clear"){
-        el.style.setProperty("--shape-stroke-width", mode==="u" ? "1px" : "1.2px");
-        el.style.setProperty("--shape-stroke-color", outlineColor);
-        el.style.setProperty("--shape-shadow", "0 1px 1px rgba(0,0,0,.08)");
-      }else if(opacity==="semi"){
-        el.style.setProperty("--shape-stroke-width", mode==="u" ? "0.9px" : "1.05px");
-        el.style.setProperty("--shape-stroke-color", outlineColor);
-        el.style.setProperty("--shape-shadow", "0 1px 1px rgba(0,0,0,.12)");
-      }else if(isLightColor(color)){
-        el.style.setProperty("--shape-stroke-width", mode==="u" ? "0.7px" : "1px");
-        el.style.setProperty("--shape-stroke-color", "#777777");
-        el.style.setProperty("--shape-shadow", "0 1px 1px rgba(0,0,0,.18)");
-      }else{
-        el.style.setProperty("--shape-stroke-width", "0px");
-        el.style.setProperty("--shape-stroke-color", "transparent");
-        el.style.setProperty("--shape-shadow", "none");
-      }
-    }
-
+    el.innerHTML=beadSvgMarkup(b);
     el.title=`${suggestionShapeName(shape)}・${opacityLabel(opacity)}`;
+
     if($("showNumbers").checked&&mode==="line"){
       const n=document.createElement("span");
       n.className="num";
@@ -4077,7 +4144,7 @@ select#candidateLimit{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"12.3",
+      app:"beads-design-studio",version:"12.4",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
@@ -4176,82 +4243,80 @@ select#candidateLimit{
     const color=String(item.color||"#FFFFFF").toUpperCase();
     const opacity=item.opacity||"opaque";
     const colorless=isColorlessClear(color,opacity);
-    const alpha=colorless?.13:opacityAlpha(opacity);
-    const outline=colorless
-      ?"rgba(99,135,151,.70)"
-      :hexToRgba(darkenHex(color,opacity==="clear"?.18:.24),opacity==="clear"?.90:.80);
+    const base=colorless?"#DDEBF0":color;
+    const edge=colorless?"#7E9CAA":darkenHex(color,opacity==="clear"?.14:.20);
+    const alpha=colorless?.22:opacity==="clear"?.54:opacity==="semi"?.78:.98;
 
-    function glassHighlight(cx,cy,rx,ry){
-      if(opacity==="opaque")return;
-      ctx.save();
-      ctx.fillStyle=opacity==="clear"?"rgba(255,255,255,.86)":"rgba(255,255,255,.68)";
+    function traceShape(){
       ctx.beginPath();
-      ctx.ellipse(cx-rx*.28,cy-ry*.30,rx*.23,ry*.14,-.55,0,Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    if(shape==="round"){
-      ctx.save();
-      ctx.globalAlpha=alpha;
-      drawCircle(ctx,x,y,r,color);
-      ctx.restore();
-
-      if(opacity!=="opaque"){
-        ctx.save();
-        ctx.strokeStyle=outline;
-        ctx.lineWidth=opacity==="clear"?1.7:1.35;
-        ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
-        ctx.restore();
-        glassHighlight(x,y,r,r);
+      if(shape==="round"){
+        ctx.arc(x,y,r,0,Math.PI*2);
+      }else if(shape==="oval"){
+        ctx.ellipse(x,y,r*1.45,r*.78,0,0,Math.PI*2);
+      }else if(shape==="diamond"){
+        ctx.moveTo(x,y-r);
+        ctx.lineTo(x+r,y);
+        ctx.lineTo(x,y+r);
+        ctx.lineTo(x-r,y);
+        ctx.closePath();
+      }else if(shape==="star"){
+        const outer=r,inner=r*.43;
+        for(let i=0;i<10;i++){
+          const rr=i%2===0?outer:inner;
+          const a=-Math.PI/2+i*Math.PI/5;
+          const px=x+Math.cos(a)*rr,py=y+Math.sin(a)*rr;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
+      }else{
+        // Heart
+        const s=r/50;
+        ctx.moveTo(x,y+r*.78);
+        ctx.bezierCurveTo(x-r*.12,y+r*.62,x-r*.72,y+r*.24,x-r*.72,y-r*.22);
+        ctx.bezierCurveTo(x-r*.72,y-r*.72,x-r*.16,y-r*.82,x,y-r*.42);
+        ctx.bezierCurveTo(x+r*.16,y-r*.82,x+r*.72,y-r*.72,x+r*.72,y-r*.22);
+        ctx.bezierCurveTo(x+r*.72,y+r*.24,x+r*.12,y+r*.62,x,y+r*.78);
+        ctx.closePath();
       }
-      return;
     }
 
-    if(shape==="oval"){
-      ctx.save();
-      ctx.globalAlpha=alpha;
-      ctx.fillStyle=color;
-      ctx.beginPath();ctx.ellipse(x,y,r*1.5,r*.75,0,0,Math.PI*2);ctx.fill();
-      ctx.restore();
-
-      ctx.save();
-      ctx.strokeStyle=opacity==="opaque"?"rgba(0,0,0,.35)":outline;
-      ctx.lineWidth=opacity==="clear"?1.7:1.15;
-      ctx.beginPath();ctx.ellipse(x,y,r*1.5,r*.75,0,0,Math.PI*2);ctx.stroke();
-      ctx.restore();
-      glassHighlight(x,y,r*1.5,r*.75);
-      return;
-    }
-
-    const glyph=shape==="star"?"★":shape==="heart"?"♥":"◆";
     ctx.save();
-    ctx.font=`${Math.max(12,r*2.4)}px sans-serif`;
-    ctx.textAlign="center";
-    ctx.textBaseline="middle";
+    traceShape();
+    ctx.clip();
 
-    ctx.globalAlpha=alpha;
-    ctx.fillStyle=color;
-    ctx.fillText(glyph,x,y+1);
+    const grad=ctx.createRadialGradient(
+      x-r*.32,y-r*.36,r*.08,
+      x,y,r*1.22
+    );
+    grad.addColorStop(0,hexToRgba("#FFFFFF",opacity==="opaque"?.30:.48));
+    grad.addColorStop(.30,hexToRgba(base,alpha));
+    grad.addColorStop(.74,hexToRgba(base,Math.min(1,alpha+.10)));
+    grad.addColorStop(1,hexToRgba(edge,opacity==="opaque"?.92:.72));
+    ctx.fillStyle=grad;
+    ctx.fillRect(x-r*1.6,y-r*1.6,r*3.2,r*3.2);
     ctx.restore();
 
-    if(opacity!=="opaque" || isLightColor(color)){
-      ctx.save();
-      ctx.font=`${Math.max(12,r*2.4)}px sans-serif`;
-      ctx.textAlign="center";
-      ctx.textBaseline="middle";
-      ctx.lineWidth=Math.max(1,r*.12);
-      ctx.strokeStyle=opacity==="opaque"?"#777777":outline;
-      ctx.strokeText(glyph,x,y+1);
+    ctx.save();
+    traceShape();
+    ctx.strokeStyle=hexToRgba(edge,opacity==="clear"?.92:opacity==="semi"?.82:.72);
+    ctx.lineWidth=opacity==="clear"?Math.max(1.4,r*.13):opacity==="semi"?Math.max(1.2,r*.11):Math.max(1,r*.08);
+    ctx.stroke();
 
-      if(opacity!=="opaque"){
-        ctx.globalAlpha=opacity==="clear"?.78:.58;
-        ctx.fillStyle="#FFFFFF";
-        ctx.font=`${Math.max(8,r*.92)}px sans-serif`;
-        ctx.fillText("•",x-r*.28,y-r*.25);
+    // Common glass reflection, clipped conceptually to upper-left of each silhouette.
+    if(opacity!=="opaque"){
+      ctx.strokeStyle=opacity==="clear"?"rgba(255,255,255,.92)":"rgba(255,255,255,.72)";
+      ctx.lineWidth=Math.max(1.3,r*.13);
+      ctx.lineCap="round";
+      ctx.beginPath();
+      if(shape==="round"||shape==="oval"){
+        ctx.arc(x-r*.18,y-r*.16,r*.36,Math.PI*1.05,Math.PI*1.58);
+      }else{
+        ctx.moveTo(x-r*.34,y-r*.22);
+        ctx.quadraticCurveTo(x-r*.12,y-r*.52,x+r*.12,y-r*.32);
       }
-      ctx.restore();
+      ctx.stroke();
     }
+    ctx.restore();
   }
 
   function drawCircle(ctx,x,y,r,color){
