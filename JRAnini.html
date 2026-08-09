@@ -1194,13 +1194,13 @@ button, .start-race{
 .track3d canvas,#race{position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;border-radius:20px !important;}
 #track{z-index:1;pointer-events:none;}
 #race{z-index:2;pointer-events:none;}
-\n\n/* ===== r6: LANDSCAPE-FIRST RACE VIEW ===== */\n.portrait-race-notice{display:none}\n@media (orientation:portrait){\n  body.race-active .portrait-race-notice{\n    display:flex;position:absolute;z-index:2000;inset:0;align-items:center;justify-content:center;\n    background:rgba(3,7,6,.92);padding:24px;text-align:center;\n  }\n  .portrait-race-notice>div{max-width:340px;border:1px solid rgba(216,185,104,.46);background:#07110b;border-radius:18px;padding:20px 18px;box-shadow:0 18px 70px #000}\n  .portrait-race-notice b{display:block;color:#f1d78c;font-size:18px;margin-bottom:10px}\n  .portrait-race-notice span{display:block;color:#e7edf5;font-size:12px;line-height:1.6}\n}\n@media (orientation:landscape){\n  #app{min-height:0 !important;height:100dvh !important;overflow:hidden !important}\n  .landscape-hint{display:none !important}\n  .scene{\n    inset:6px 6px 102px 6px !important;\n    perspective:none !important;z-index:5 !important;\n  }\n  .track3d{inset:0 !important;transform:none !important;border-radius:18px !important}\n  .track3d canvas,#race{border-radius:18px !important}\n  .ranking{\n    display:block !important;left:12px !important;top:12px !important;bottom:auto !important;\n    width:220px !important;padding:8px 10px !important;border-radius:12px !important;\n    background:rgba(3,8,6,.90) !important;backdrop-filter:none !important;z-index:82 !important;\n  }\n  .rank-title{font-size:9px !important;margin-bottom:4px !important}\n  .rank-list{display:grid !important;grid-template-columns:1fr !important;gap:2px !important}\n  .rank-item{font-size:7.8px !important;line-height:1.05 !important}\n  .rank-no{width:18px !important;font-size:8px !important}\n  .silk{width:8px !important;height:8px !important}\n  .topbar{top:8px !important;right:10px !important;left:auto !important;z-index:83 !important}\n  .title{width:300px !important;max-width:300px !important;padding:6px 9px !important;background:rgba(3,8,6,.88) !important}\n  .title h1{font-size:14px !important}.title .sub{display:none !important}.clock{display:none !important}\n  .hud,.coursebox,.zoom-panel,.note{display:none !important}\n  .callout{\n    top:50% !important;max-width:38vw !important;font-size:12px !important;padding:7px 12px !important;\n    background:rgba(3,8,6,.82) !important;z-index:72 !important;pointer-events:none !important;\n  }\n  .lower{\n    left:8px !important;right:8px !important;bottom:6px !important;top:auto !important;\n    height:88px !important;min-height:88px !important;max-height:88px !important;\n    padding:8px 12px 8px 14px !important;border-radius:12px !important;overflow:hidden !important;\n    background:rgba(3,8,6,.95) !important;z-index:90 !important;\n  }\n  .lower .chapter{font-size:12px !important;line-height:1.1 !important;margin:0 0 4px !important}\n  .lower .caption{font-size:8.5px !important;line-height:1.28 !important;max-height:28px !important;overflow:hidden !important}\n  .lower .chips{margin-top:5px !important;gap:4px !important;flex-wrap:nowrap !important}\n  .lower .chip{font-size:7px !important;padding:2px 6px !important}\n  .results-panel{\n    top:10px !important;left:50% !important;right:auto !important;bottom:auto !important;\n    transform:translateX(-50%) !important;width:min(420px,44vw) !important;max-height:48vh !important;overflow:auto !important;\n    padding:8px 10px !important;background:rgba(3,8,6,.94) !important;z-index:92 !important;\n  }\n  .results-panel.show{transform:translateX(-50%) !important}\n  .results-list{grid-template-columns:1fr 1fr !important;gap:3px 8px !important}\n  .result-item{font-size:8px !important}.result-rank{width:18px !important;font-size:8px !important}\n  .replay{right:10px !important;bottom:10px !important;width:30px !important;height:30px !important;z-index:95 !important}\n}\n
+\n\n/* ===== r6: LANDSCAPE-FIRST RACE VIEW ===== */\n.portrait-race-notice{display:none !important}\n@media (orientation:landscape){\n  #app{min-height:0 !important;height:100dvh !important;overflow:hidden !important}\n  .landscape-hint{display:none !important}\n  .scene{\n    inset:6px 6px 102px 6px !important;\n    perspective:none !important;z-index:5 !important;\n  }\n  .track3d{inset:0 !important;transform:none !important;border-radius:18px !important}\n  .track3d canvas,#race{border-radius:18px !important}\n  .ranking{\n    display:block !important;left:12px !important;top:12px !important;bottom:auto !important;\n    width:220px !important;padding:8px 10px !important;border-radius:12px !important;\n    background:rgba(3,8,6,.90) !important;backdrop-filter:none !important;z-index:82 !important;\n  }\n  .rank-title{font-size:9px !important;margin-bottom:4px !important}\n  .rank-list{display:grid !important;grid-template-columns:1fr !important;gap:2px !important}\n  .rank-item{font-size:7.8px !important;line-height:1.05 !important}\n  .rank-no{width:18px !important;font-size:8px !important}\n  .silk{width:8px !important;height:8px !important}\n  .topbar{top:8px !important;right:10px !important;left:auto !important;z-index:83 !important}\n  .title{width:300px !important;max-width:300px !important;padding:6px 9px !important;background:rgba(3,8,6,.88) !important}\n  .title h1{font-size:14px !important}.title .sub{display:none !important}.clock{display:none !important}\n  .hud,.coursebox,.zoom-panel,.note{display:none !important}\n  .callout{\n    top:50% !important;max-width:38vw !important;font-size:12px !important;padding:7px 12px !important;\n    background:rgba(3,8,6,.82) !important;z-index:72 !important;pointer-events:none !important;\n  }\n  .lower{\n    left:8px !important;right:8px !important;bottom:6px !important;top:auto !important;\n    height:88px !important;min-height:88px !important;max-height:88px !important;\n    padding:8px 12px 8px 14px !important;border-radius:12px !important;overflow:hidden !important;\n    background:rgba(3,8,6,.95) !important;z-index:90 !important;\n  }\n  .lower .chapter{font-size:12px !important;line-height:1.1 !important;margin:0 0 4px !important}\n  .lower .caption{font-size:8.5px !important;line-height:1.28 !important;max-height:28px !important;overflow:hidden !important}\n  .lower .chips{margin-top:5px !important;gap:4px !important;flex-wrap:nowrap !important}\n  .lower .chip{font-size:7px !important;padding:2px 6px !important}\n  .results-panel{\n    top:10px !important;left:50% !important;right:auto !important;bottom:auto !important;\n    transform:translateX(-50%) !important;width:min(420px,44vw) !important;max-height:48vh !important;overflow:auto !important;\n    padding:8px 10px !important;background:rgba(3,8,6,.94) !important;z-index:92 !important;\n  }\n  .results-panel.show{transform:translateX(-50%) !important}\n  .results-list{grid-template-columns:1fr 1fr !important;gap:3px 8px !important}\n  .result-item{font-size:8px !important}.result-rank{width:18px !important;font-size:8px !important}\n  .replay{right:10px !important;bottom:10px !important;width:30px !important;height:30px !important;z-index:95 !important}\n}\n
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="portrait-race-notice"><div><b>横向きで再生してください</b><span>馬の横並び・レーン移動・追い抜きを見やすくするため、r6は横画面を主表示にしています。</span></div></div>
-  <div class="landscape-hint">↻ 横向き表示推奨：横並び・追い抜きが見やすくなります</div>
+  <div class="portrait-race-notice" aria-hidden="true"></div>
+  <div class="landscape-hint">縦横どちらでも再生できます｜横向きは横並び・追い抜きが見やすくなります</div>
 
   <div class="intro-screen" id="introScreen">
     <div class="intro-card">
@@ -1361,7 +1361,7 @@ button, .start-race{
 
   <div class="hud">
     <div class="hud-title">RACE FLOW</div>
-    <div class="hud-row"><span>Course</span><b>Hanshin Turf 2200m</b></div>
+    <div class="hud-row"><span>Course</span><b id="courseValue">Hanshin Turf 2200m</b></div>
     <div class="hud-row"><span>Pace</span><b id="pace">Sustained Pace / 持続戦</b></div>
     <div class="hud-row"><span>Key Point</span><b id="keypoint">⑤クロワデュノールの早め進出</b></div>
     <div class="phasebar"><span></span></div>
@@ -1418,7 +1418,7 @@ button, .start-race{
 <script id="embeddedRosterData" type="application/json">{}</script>
 <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-// r6: landscape-first race view; wider lanes, collision-aware labels, upright horses.
+// r7: portrait + landscape supported; imported races remove legacy Takrazuka-specific text and use number-only course labels.
 
 
 // ===== Compatibility first: must run before any canvas drawing =====
@@ -1765,11 +1765,13 @@ function genericizePredictionUi(count){
   const resultSub=document.querySelector('.results-sub'); if(resultSub) resultSub.textContent='既存の馬番別モーションを流用した表示です。予想着順ではありません。';
   const zoomTitle=document.querySelector('.zoom-title'); if(zoomTitle) zoomTitle.textContent='FINAL STRAIGHT CAM / 仮表示';
   const zoomSub=document.querySelector('.zoom-sub'); if(zoomSub) zoomSub.textContent='脚質・展開ロジックは第二段階で設定します';
+  const courseValue=document.getElementById('courseValue'); if(courseValue) courseValue.textContent='コース情報未取込';
   const btn=document.getElementById('startRaceBtn'); if(btn) btn.textContent='仮アニメーションを再生';
   const genericChapters=['第一幕　スタート','第二幕　1〜2角','第三幕　向こう正面','第四幕　3角手前','第五幕　3〜4角','第六幕　直線〜残り200m','第七幕　ゴール前'];
   const genericKeys=['出走馬データ反映済み','位置取り未設定','ペース未設定','進出タイミング未設定','コーナー位置未設定','末脚評価未設定','着順予想未設定'];
   const genericCallouts=['スタート','1〜2角','向こう正面','3角手前','3〜4角','直線','ゴール'];
-  for(let i=0;i<7;i++){ chapters[i]=genericChapters[i]; keys[i]=genericKeys[i]; callouts[i]=genericCallouts[i]; }
+  const genericPaces=['未設定','未設定','未設定','未設定','未設定','未設定','未設定'];
+  for(let i=0;i<7;i++){ chapters[i]=genericChapters[i]; keys[i]=genericKeys[i]; callouts[i]=genericCallouts[i]; paces[i]=genericPaces[i]; }
   const genericCaptions=[
     '出走馬・騎手は読み込み済みです。第一段階では脚質やスタート直後の位置取りを判定しません。',
     '現在の前後差は既存HTMLの馬番別モーションを仮流用し、横方向は見やすさのため仮レーン移動を加えています。実際の先行・差し関係を示すものではありません。',
@@ -2172,7 +2174,7 @@ function drawFinishZoom(states, t){
   zctx.fillStyle = "rgba(255,255,255,.86)";
   zctx.font = "bold 11px sans-serif";
   zctx.textAlign = "left";
-  zctx.fillText("⑯メイショウタバルが粘り、⑤クロワデュノールが外から持続力で捕らえにかかる。", 12, zh - 10);
+  zctx.fillText(importedMode ? "脚質・展開予想は未設定です。表示確認用の仮アニメーションです。" : "⑯メイショウタバルが粘り、⑤クロワデュノールが外から持続力で捕らえにかかる。", 12, zh - 10);
 }
 
 
@@ -2677,7 +2679,9 @@ function drawHorse(h, p, idx, w, ht, raceT){
   ctx.fillText(String(h.number),pos.x,pos.y-24*depthScale+0.5);
   ctx.restore();
 
-  if(importedMode || landscape || idx < 8){
+  // r7: 読み込みレースではコース上の長い馬名ラベルを出さず、馬番バッジで識別する。
+  // 馬名は LIVE POSITION / ゴール結果で確認できる。元の宝塚記念モードは従来表示を維持。
+  if(!importedMode && (landscape || idx < 8)){
     ctx.save();
     const text = `${h.number}. ${h.name}`;
     ctx.font=`bold ${window.innerWidth<700?8:10}px sans-serif`;
@@ -2773,7 +2777,9 @@ function animate(now){
   if(phase < 6){
     callout.textContent = callouts[phase];
   } else {
-    callout.textContent = crossedGoal ? "ゴールイン！想定着順を表示" : "⑤が⑯を捕らえにかかる";
+    callout.textContent = importedMode
+      ? (crossedGoal ? "ゴールイン！仮アニメーション順を表示" : "ゴール前（展開予想未設定）")
+      : (crossedGoal ? "ゴールイン！想定着順を表示" : "⑤が⑯を捕らえにかかる");
   }
 
   if(t < 1) requestAnimationFrame(animate);
