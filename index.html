@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v12.2.1</title>
+<title>ビーズ設計スタジオ v12.2.2</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1485,6 +1485,75 @@ select#candidateLimit{
   border-radius:50%;
 }
 
+
+/* =========================================================
+   v12.2.2 Remove circular base from non-round beads
+   ========================================================= */
+.bead.shape-oval,
+.bead.shape-star,
+.bead.shape-heart,
+.bead.shape-diamond{
+  background-color:transparent!important;
+}
+
+.bead.shape-star,
+.bead.shape-heart,
+.bead.shape-diamond{
+  border:0!important;
+  box-shadow:none!important;
+  background-image:none!important;
+}
+
+.bead.shape-oval.opacity-semi,
+.bead.shape-oval.opacity-clear{
+  background-color:transparent!important;
+}
+
+/* Non-round glyphs must show only the glyph itself. */
+.bead.shape-star.opacity-opaque,
+.bead.shape-star.opacity-semi,
+.bead.shape-star.opacity-clear,
+.bead.shape-heart.opacity-opaque,
+.bead.shape-heart.opacity-semi,
+.bead.shape-heart.opacity-clear,
+.bead.shape-diamond.opacity-opaque,
+.bead.shape-diamond.opacity-semi,
+.bead.shape-diamond.opacity-clear{
+  border:0!important;
+  box-shadow:none!important;
+  background:none!important;
+}
+
+
+.bead.shape-oval{
+  position:relative;
+}
+.bead.shape-oval::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  background:var(--shape-color,#8F78B5);
+  border:1px solid rgba(0,0,0,.25);
+  box-shadow:
+    inset -2px -2px 4px rgba(0,0,0,.10),
+    inset 2px 2px 4px rgba(255,255,255,.55);
+}
+.bead.shape-oval.opacity-semi::before{
+  border-color:rgba(70,115,140,.50);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.42),
+    inset -2px -2px 5px rgba(63,112,138,.16),
+    0 1px 2px rgba(0,0,0,.08);
+}
+.bead.shape-oval.opacity-clear::before{
+  border:1.5px solid rgba(64,112,142,.58);
+  box-shadow:
+    inset 2px 2px 5px rgba(255,255,255,.86),
+    inset -2px -2px 4px rgba(86,137,163,.14),
+    0 1px 2px rgba(0,0,0,.08);
+}
+
 </style>
 </head>
 <body>
@@ -1517,7 +1586,7 @@ select#candidateLimit{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v12.2.1</h1>
+      <h1>ビーズ設計スタジオ v12.2.2</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -3586,6 +3655,13 @@ select#candidateLimit{
     el.style.backgroundColor=visualColor;
     el.style.setProperty("--shape-color",visualColor);
 
+    if(shape!=="round"){
+      // 丸以外は親要素に丸いベースを持たせない。
+      el.style.backgroundColor="transparent";
+      el.style.border="0";
+      el.style.boxShadow="none";
+    }
+
     if(shape==="star"||shape==="heart"||shape==="diamond"){
       // 記号形状は ::before の形そのものを維持して透明度だけ変える。
       el.style.backgroundColor="transparent";
@@ -3867,7 +3943,7 @@ select#candidateLimit{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"12.2.1",
+      app:"beads-design-studio",version:"12.2.2",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
