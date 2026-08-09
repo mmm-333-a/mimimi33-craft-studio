@@ -1493,45 +1493,179 @@ function cleanupJockeyCandidate(v){
 }
 
 function parseJraOcrText(text){
+  // Generic fallback parser. The primary JRA-mobile path uses row-by-row OCR below.
   const lines = String(text||'').split(/\r?\n/).map(normalizeOcrLine).filter(Boolean);
   const rows = [];
   const used = new Set();
 
-  // Primary: horse-number anchored blocks.
   for(let i=0;i<lines.length;i++){
     const m = lines[i].match(/(?:^|\s)(1[0-8]|[1-9])(?:\s|$|[枠馬])/);
     if(!m) continue;
     const num = Number(m[1]);
     if(used.has(num)) continue;
-    const block = lines.slice(i, Math.min(lines.length, i+8));
+    const block = lines.slice(i, Math.min(lines.length, i+7));
     let horse=''; let jockey='';
     for(const line of block){
       const c = cleanupHorseCandidate(line);
-      if(!horse && looksLikeHorseName(c)) { horse=c; continue; }
-      if(horse && !jockey && looksLikeJockey(line)) { jockey=cleanupJockeyCandidate(line); break; }
-    }
-    if(horse){
-      rows.push({number:num,name:horse,jockey}); used.add(num);
-    }
-  }
-
-  // Fallback: collect likely Katakana horse names in reading order.
-  if(rows.length < 5){
-    const names=[];
-    for(const line of lines){
-      const parts = line.match(/[ァ-ヶー]{2,18}/g) || [];
-      for(const p of parts){
-        if(looksLikeHorseName(p) && !names.includes(p)) names.push(p);
+      if(!horse && looksLikeHorseName(c)) horse=c;
+      if(!jockey){
+        const jm=line.match(/([A-Za-zＡ-Ｚａ-ｚ一-龯々ァ-ヶー・.．]{2,18})\s*[\(（]?\s*\d{2}(?:\.\d)?\s*[\)）]?/);
+        if(jm) jockey=jm[1].trim();
       }
     }
-    if(names.length){
-      rows.length=0;
-      names.slice(0,18).forEach((name,idx)=>rows.push({number:idx+1,name,jockey:''}));
-    }
+    if(horse){ rows.push({number:num,name:horse,jockey}); used.add(num); }
   }
-
   rows.sort((a,b)=>a.number-b.number);
   return rows;
+}
+
+function loadImageFile(file){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{ URL.revokeObjectURL(url); resolve(img); };
+    img.onerror=(e)=>{ URL.revokeObjectURL(url); reject(e); };
+    img.src=url;
+  });
+}
+
+function canvasFromImage(img, maxWidth=900){
+  const scale=Math.min(1, maxWidth/img.naturalWidth);
+  const c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(img.naturalWidth*scale));
+  c.height=Math.max(1,Math.round(img.naturalHeight*scale));
+  c.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0,c.width,c.height);
+  return c;
+}
+
+function detectJraRowBands(canvas){
+  // JRA mobile出馬表は各馬の行を横罫線で区切る。画面全体をOCRせず、その罫線から1頭ずつ切り出す。
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  const w=canvas.width,h=canvas.height;
+  const x0=Math.floor(w*0.01), x1=Math.floor(w*0.69); // 右側のオッズ・前4走は判定から外す
+  const data=ctx.getImageData(0,0,w,h).data;
+  const scores=new Float32Array(h);
+  const step=Math.max(1,Math.floor(w/450));
+  for(let y=0;y<h;y++){
+    let hit=0,total=0;
+    for(let x=x0;x<x1;x+=step){
+      const i=(y*w+x)*4, r=data[i],g=data[i+1],b=data[i+2];
+      const mx=Math.max(r,g,b), mn=Math.min(r,g,b), avg=(r+g+b)/3;
+      if(mx-mn<16 && avg>70 && avg<225) hit++;
+      total++;
+    }
+    scores[y]=total?hit/total:0;
+  }
+  const runs=[];
+  for(let y=0;y<h;y++){
+    if(scores[y] < .72) continue;
+    const a=y; let best=y,bestScore=scores[y];
+    while(y+1<h && scores[y+1]>=.72){ y++; if(scores[y]>bestScore){best=y;bestScore=scores[y];} }
+    runs.push({a,b:y,y:best,score:bestScore});
+  }
+  const ys=runs.map(r=>r.y);
+  const minGap=w*0.095, maxGap=w*0.17;
+  const pairs=[];
+  for(let i=0;i<ys.length-1;i++){
+    const gap=ys[i+1]-ys[i];
+    if(gap>=minGap && gap<=maxGap) pairs.push({top:ys[i]+2,bottom:ys[i+1]-2,height:gap-4});
+  }
+  return pairs;
+}
+
+function cropRowCanvas(source, band){
+  const w=source.width;
+  const sx=Math.floor(w*0.055);           // 枠色の大半を除外しつつ馬番を残す
+  const sw=Math.floor(w*0.66)-sx;         // 右のオッズ/人気/前4走を除外
+  const sy=Math.max(0,band.top);
+  const sh=Math.max(20,band.bottom-band.top);
+  const scale=Math.min(2.0, 1050/sw);
+  const c=document.createElement('canvas');
+  c.width=Math.round(sw*scale); c.height=Math.round(sh*scale);
+  const ctx=c.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(source,sx,sy,sw,sh,0,0,c.width,c.height);
+
+  // 高コントラスト化。青い馬名/騎手、黒文字、赤い馬体重をすべて濃色として残す。
+  const im=ctx.getImageData(0,0,c.width,c.height), d=im.data;
+  for(let i=0;i<d.length;i+=4){
+    const r=d[i],g=d[i+1],b=d[i+2];
+    const lum=.299*r+.587*g+.114*b;
+    const isBlue=b>r*1.15 && b>g*1.05;
+    const isRed=r>g*1.35 && r>b*1.35;
+    const v=(isBlue||isRed||lum<175)?0:255;
+    d[i]=d[i+1]=d[i+2]=v; d[i+3]=255;
+  }
+  ctx.putImageData(im,0,0);
+  return c;
+}
+
+function parseJraRowText(text){
+  const rawLines=String(text||'').split(/\r?\n/).map(normalizeOcrLine).filter(Boolean);
+  const joined=rawLines.join(' ');
+  let number=null;
+  for(const line of rawLines){
+    const m=line.match(/(?:^|\s)(1[0-8]|[1-9])(?:\s|$)/);
+    if(m){ number=Number(m[1]); break; }
+  }
+  if(!number){
+    const m=joined.match(/\b(1[0-8]|[1-9])\b/); if(m) number=Number(m[1]);
+  }
+
+  let name='';
+  const reject=/レパード|ステークス|ダート|コース|発走|人気|前4走|騎手|調教師|馬体重|美浦|栗東/;
+  for(const line of rawLines){
+    const parts=line.match(/[ァ-ヶー]{2,18}/g)||[];
+    for(const p of parts){
+      if(!reject.test(p) && looksLikeHorseName(p)){ name=p; break; }
+    }
+    if(name) break;
+  }
+
+  let jockey='';
+  for(const line of rawLines){
+    let m=line.match(/([A-Za-zＡ-Ｚａ-ｚ一-龯々ァ-ヶー・.．]{2,18})\s*[\(（]?\s*(?:5[0-9]|4[89]|6[0-2])(?:\.\d)?\s*[\)）]?/);
+    if(m){
+      let c=m[1].replace(/^[▲△☆★]/,'').trim();
+      // 性齢・毛色などを巻き込んだ場合は末尾の人名らしい部分を優先
+      const jm=c.match(/([一-龯々]{2,6}|[A-ZＡ-Ｚ][.．・]?[ァ-ヶー]{2,12})$/);
+      jockey=(jm?jm[1]:c).trim();
+      break;
+    }
+  }
+  if(!jockey){
+    // 斤量が崩れた場合の補助。3行目の先頭側にある漢字人名を候補にする。
+    for(let i=Math.min(2,rawLines.length-1);i<rawLines.length;i++){
+      const m=rawLines[i].match(/(?:^|\s)([一-龯々]{2,6})(?=\s|\(|（|\d|$)/);
+      if(m && !/美浦|栗東|牡|牝|鹿|栗|黒鹿|青鹿/.test(m[1])){ jockey=m[1]; break; }
+    }
+  }
+  return {number,name,jockey,raw:rawLines.join(' / ')};
+}
+
+async function recognizeJraRows(worker, file, fileIndex, totalFiles, foundByNumber, rawParts){
+  const img=await loadImageFile(file);
+  const source=canvasFromImage(img,900);
+  const bands=detectJraRowBands(source);
+  if(!bands.length) return 0;
+  let added=0;
+  try{ await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'}); }catch(e){}
+  for(let i=0;i<bands.length;i++){
+    setOcrStatus(`JRA出馬表の行を読み取っています… 画像${fileIndex+1}/${totalFiles}・${i+1}/${bands.length}`);
+    const rowCanvas=cropRowCanvas(source,bands[i]);
+    const ret=await worker.recognize(rowCanvas);
+    const text=ret?.data?.text||'';
+    const parsed=parseJraRowText(text);
+    rawParts.push(`[画像${fileIndex+1} 行${i+1}] ${parsed.raw || text.trim()}`);
+    if(parsed.number && parsed.name){
+      const prev=foundByNumber.get(parsed.number);
+      const quality=(parsed.name?2:0)+(parsed.jockey?1:0);
+      const prevQuality=prev?((prev.name?2:0)+(prev.jockey?1:0)):0;
+      if(!prev || quality>prevQuality){ foundByNumber.set(parsed.number,{number:parsed.number,name:parsed.name,jockey:parsed.jockey}); }
+      if(!prev) added++;
+    }
+    if(foundByNumber.size>=18) break;
+  }
+  return added;
 }
 
 function setOcrStatus(msg, kind=''){
@@ -1621,22 +1755,43 @@ async function runOcr(){
   if(!imageFiles.length){setOcrStatus('先にJRA出走表のスクリーンショットを選択してください。','error');return;}
   if(!window.Tesseract){setOcrStatus('OCRライブラリを読み込めませんでした。インターネット接続を確認してください。','error');return;}
   const btn=document.getElementById('runOcrBtn'); btn.disabled=true;
-  setOcrStatus('日本語OCRを準備しています。初回は言語データを取得するため通信が発生します。');
+  setOcrStatus('JRAモバイル出馬表を1頭ずつ切り分けて読み取る準備をしています。');
   let worker;
   try{
     worker=await Tesseract.createWorker('jpn');
-    const textParts=[];
+    const foundByNumber=new Map();
+    const rawParts=[];
+    let detectedBands=0;
     for(let i=0;i<imageFiles.length;i++){
-      setOcrStatus(`画像を読み取っています… ${i+1}/${imageFiles.length}`);
-      const ret=await worker.recognize(imageFiles[i]);
-      textParts.push(ret?.data?.text || '');
+      const before=rawParts.length;
+      await recognizeJraRows(worker,imageFiles[i],i,imageFiles.length,foundByNumber,rawParts);
+      detectedBands += rawParts.length-before;
+      if(foundByNumber.size>=18) break;
     }
-    const text=textParts.join('\n');
-    document.getElementById('rawOcrText').value=text;
-    const rows=parseJraOcrText(text);
+
+    let rows=[...foundByNumber.values()].sort((a,b)=>a.number-b.number);
+    document.getElementById('rawOcrText').value=rawParts.join('\n');
+
+    // JRA罫線を検出できない画像だけ、従来の全画面OCRをフォールバックとして使う。
+    if(!detectedBands){
+      setOcrStatus('JRAの行罫線を検出できなかったため、全画面OCRに切り替えています。');
+      const textParts=[];
+      try{ await worker.setParameters({tessedit_pageseg_mode:'3'}); }catch(e){}
+      for(let i=0;i<imageFiles.length;i++){
+        const ret=await worker.recognize(imageFiles[i]); textParts.push(ret?.data?.text||'');
+      }
+      const text=textParts.join('\n');
+      document.getElementById('rawOcrText').value=text;
+      rows=parseJraOcrText(text);
+    }
+
     showReviewRows(rows);
-    if(rows.length){ setOcrStatus(`${rows.length}頭分の候補を抽出しました。馬番・馬名・騎手を確認して修正してください。`,'ok'); }
-    else { setOcrStatus('自動抽出できませんでした。OCR生テキストを確認し、「行を追加」から手入力できます。','error'); }
+    if(rows.length){
+      const incomplete=rows.filter(r=>!r.jockey).length;
+      setOcrStatus(`${rows.length}頭分を抽出しました。${incomplete?`騎手未取得 ${incomplete}頭あり。`:''} 馬番・馬名・騎手を確認してから反映してください。`,'ok');
+    }else{
+      setOcrStatus('馬番＋馬名を自動抽出できませんでした。OCR生テキストを確認し、「行を追加」から手入力できます。','error');
+    }
   }catch(e){
     console.error(e); setOcrStatus('OCR処理に失敗しました。画像形式・通信状態を確認してください。','error');
   }finally{
