@@ -1194,11 +1194,12 @@ button, .start-race{
 .track3d canvas,#race{position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;border-radius:20px !important;}
 #track{z-index:1;pointer-events:none;}
 #race{z-index:2;pointer-events:none;}
-
+\n\n/* ===== r6: LANDSCAPE-FIRST RACE VIEW ===== */\n.portrait-race-notice{display:none}\n@media (orientation:portrait){\n  body.race-active .portrait-race-notice{\n    display:flex;position:absolute;z-index:2000;inset:0;align-items:center;justify-content:center;\n    background:rgba(3,7,6,.92);padding:24px;text-align:center;\n  }\n  .portrait-race-notice>div{max-width:340px;border:1px solid rgba(216,185,104,.46);background:#07110b;border-radius:18px;padding:20px 18px;box-shadow:0 18px 70px #000}\n  .portrait-race-notice b{display:block;color:#f1d78c;font-size:18px;margin-bottom:10px}\n  .portrait-race-notice span{display:block;color:#e7edf5;font-size:12px;line-height:1.6}\n}\n@media (orientation:landscape){\n  #app{min-height:0 !important;height:100dvh !important;overflow:hidden !important}\n  .landscape-hint{display:none !important}\n  .scene{\n    inset:6px 6px 102px 6px !important;\n    perspective:none !important;z-index:5 !important;\n  }\n  .track3d{inset:0 !important;transform:none !important;border-radius:18px !important}\n  .track3d canvas,#race{border-radius:18px !important}\n  .ranking{\n    display:block !important;left:12px !important;top:12px !important;bottom:auto !important;\n    width:220px !important;padding:8px 10px !important;border-radius:12px !important;\n    background:rgba(3,8,6,.90) !important;backdrop-filter:none !important;z-index:82 !important;\n  }\n  .rank-title{font-size:9px !important;margin-bottom:4px !important}\n  .rank-list{display:grid !important;grid-template-columns:1fr !important;gap:2px !important}\n  .rank-item{font-size:7.8px !important;line-height:1.05 !important}\n  .rank-no{width:18px !important;font-size:8px !important}\n  .silk{width:8px !important;height:8px !important}\n  .topbar{top:8px !important;right:10px !important;left:auto !important;z-index:83 !important}\n  .title{width:300px !important;max-width:300px !important;padding:6px 9px !important;background:rgba(3,8,6,.88) !important}\n  .title h1{font-size:14px !important}.title .sub{display:none !important}.clock{display:none !important}\n  .hud,.coursebox,.zoom-panel,.note{display:none !important}\n  .callout{\n    top:50% !important;max-width:38vw !important;font-size:12px !important;padding:7px 12px !important;\n    background:rgba(3,8,6,.82) !important;z-index:72 !important;pointer-events:none !important;\n  }\n  .lower{\n    left:8px !important;right:8px !important;bottom:6px !important;top:auto !important;\n    height:88px !important;min-height:88px !important;max-height:88px !important;\n    padding:8px 12px 8px 14px !important;border-radius:12px !important;overflow:hidden !important;\n    background:rgba(3,8,6,.95) !important;z-index:90 !important;\n  }\n  .lower .chapter{font-size:12px !important;line-height:1.1 !important;margin:0 0 4px !important}\n  .lower .caption{font-size:8.5px !important;line-height:1.28 !important;max-height:28px !important;overflow:hidden !important}\n  .lower .chips{margin-top:5px !important;gap:4px !important;flex-wrap:nowrap !important}\n  .lower .chip{font-size:7px !important;padding:2px 6px !important}\n  .results-panel{\n    top:10px !important;left:50% !important;right:auto !important;bottom:auto !important;\n    transform:translateX(-50%) !important;width:min(420px,44vw) !important;max-height:48vh !important;overflow:auto !important;\n    padding:8px 10px !important;background:rgba(3,8,6,.94) !important;z-index:92 !important;\n  }\n  .results-panel.show{transform:translateX(-50%) !important}\n  .results-list{grid-template-columns:1fr 1fr !important;gap:3px 8px !important}\n  .result-item{font-size:8px !important}.result-rank{width:18px !important;font-size:8px !important}\n  .replay{right:10px !important;bottom:10px !important;width:30px !important;height:30px !important;z-index:95 !important}\n}\n
 </style>
 </head>
 <body>
 <div id="app">
+  <div class="portrait-race-notice"><div><b>横向きで再生してください</b><span>馬の横並び・レーン移動・追い抜きを見やすくするため、r6は横画面を主表示にしています。</span></div></div>
   <div class="landscape-hint">↻ 横向き表示推奨：横並び・追い抜きが見やすくなります</div>
 
   <div class="intro-screen" id="introScreen">
@@ -1417,7 +1418,7 @@ button, .start-race{
 <script id="embeddedRosterData" type="application/json">{}</script>
 <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-// r5: course/horse layers split; 2.5D perspective projection; upright depth-scaled horses.
+// r6: landscape-first race view; wider lanes, collision-aware labels, upright horses.
 
 
 // ===== Compatibility first: must run before any canvas drawing =====
@@ -1784,19 +1785,18 @@ function genericizePredictionUi(count){
 }
 
 function buildImportedLanePhases(idx,count){
-  // 表示確認用の仮レーン。脚質予想ではない。
-  // 序盤は3～4列に分散し、中盤以降に内外へ持ち出して横並び・追い抜きが見えるようにする。
-  const slots=[-0.72,-0.38,-0.08,0.24,0.56,0.76];
-  const start=slots[idx % slots.length];
-  const group=Math.floor(idx/slots.length);
-  const gShift=group ? 0.08 : -0.04;
+  // r6: 表示確認用の仮レーン。脚質予想ではない。
+  // 4～5列ぶんの幅を使い、フェーズごとに横移動させて「並ぶ→持ち出す→交差する」を見せる。
+  const slots=[-1.18,-0.62,-0.12,0.40,0.96];
+  const start=slots[idx % slots.length] + (Math.floor(idx/slots.length)%2 ? 0.12 : -0.08);
   const dir=(idx%2===0)?1:-1;
-  const mid=Math.max(-0.78,Math.min(0.78,start + dir*0.18 + gShift));
-  const move=Math.max(-0.82,Math.min(0.82,mid + dir*0.22));
-  const corner=Math.max(-0.82,Math.min(0.82,move - dir*0.12));
-  const straight=Math.max(-0.82,Math.min(0.82,corner + ((idx%3)-1)*0.20));
-  const finish=Math.max(-0.82,Math.min(0.82,straight + (idx%4<2?0.10:-0.10)));
-  return [start,start*0.92,mid,move,corner,straight,finish];
+  const clamp=v=>Math.max(-1.30,Math.min(1.30,v));
+  const mid=clamp(start + dir*(0.28 + (idx%3)*0.05));
+  const move=clamp(mid + dir*(0.34 + (idx%4)*0.04));
+  const corner=clamp(move - dir*0.16);
+  const straight=clamp(corner + ((idx%5)-2)*0.17);
+  const finish=clamp(straight + (idx%4<2?0.18:-0.18));
+  return [start,start*0.94,mid,move,corner,straight,finish];
 }
 
 function applyImportedRows(rows, persist=true){
@@ -2267,7 +2267,7 @@ function getPoint(progress, lane, w, h){
 
   // lane offset
   const depth = Math.max(0, Math.min(1, y / Math.max(1,h)));
-  const lanePx = lane * (16 + 22*depth);
+  const lanePx = lane * (28 + 34*depth);
   return { x: x + nx * lanePx, y: y + ny * lanePx, depth };
 }
 
@@ -2430,6 +2430,23 @@ function drawTrack(w,h){
   trackCtx.textAlign = "center";
   trackCtx.fillText("HANSHIN TURF 2200m / INNER COURSE", w*0.52, h*0.84);
   trackCtx.textAlign = "left";
+}
+
+let r6LabelBoxes = [];
+function r6LabelPosition(x,y,w,h,idx){
+  const candidates=[
+    {x:x, y:y-46}, {x:x+44, y:y-34}, {x:x-44, y:y-34},
+    {x:x+54, y:y-58}, {x:x-54, y:y-58}, {x:x, y:y-70}
+  ];
+  for(const c of candidates){
+    const box={l:c.x-w/2-3,r:c.x+w/2+3,t:c.y-3,b:c.y+h+3};
+    if(box.l<4 || box.r>window.innerWidth-4) continue;
+    const hit=r6LabelBoxes.some(q=>!(box.r<q.l || box.l>q.r || box.b<q.t || box.t>q.b));
+    if(!hit){ r6LabelBoxes.push(box); return c; }
+  }
+  const c={x:x + ((idx%2)?52:-52), y:y-42-(idx%3)*18};
+  r6LabelBoxes.push({l:c.x-w/2-3,r:c.x+w/2+3,t:c.y-3,b:c.y+h+3});
+  return c;
 }
 
 function drawHorse(h, p, idx, w, ht, raceT){
@@ -2643,29 +2660,44 @@ function drawHorse(h, p, idx, w, ht, raceT){
 
   ctx.restore();
 
-  // ラベル：横画面または読み込みモードでは全頭表示。
-  // 3段に少しずらし、密集時の完全な重なりを減らす。
+  // r6: 馬番は常時。馬名ラベルは衝突回避して配置する。
   const landscape = window.matchMedia && window.matchMedia("(orientation: landscape)").matches;
+  ctx.save();
+  const badgeR = Math.max(8, 10*depthScale);
+  ctx.fillStyle = h.color;
+  ctx.strokeStyle = "rgba(255,255,255,.92)";
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y-24*depthScale, badgeR, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#07110b";
+  ctx.font = `900 ${Math.max(8,9*depthScale)}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(h.number),pos.x,pos.y-24*depthScale+0.5);
+  ctx.restore();
+
   if(importedMode || landscape || idx < 8){
     ctx.save();
-    ctx.fillStyle="rgba(5,8,13,.86)";
+    const text = `${h.number}. ${h.name}`;
+    ctx.font=`bold ${window.innerWidth<700?8:10}px sans-serif`;
+    const tw = ctx.measureText(text).width + 12;
+    const lh=18;
+    const lp=r6LabelPosition(pos.x,pos.y,tw,lh,idx);
     ctx.strokeStyle=h.color;
     ctx.lineWidth=1;
-    const text = `${h.number}. ${h.name}`;
-    ctx.font=`bold ${window.innerWidth<600?8:10}px sans-serif`;
-    const tw = ctx.measureText(text).width + 12;
-    const tier = idx % 3;
-    const labelY = pos.y - 36 - tier*13;
     ctx.beginPath();
-    ctx.moveTo(pos.x,pos.y-18);
-    ctx.lineTo(pos.x,labelY+17);
+    ctx.moveTo(pos.x,pos.y-18*depthScale);
+    ctx.lineTo(lp.x,lp.y+lh);
     ctx.stroke();
+    ctx.fillStyle="rgba(5,8,13,.88)";
     ctx.beginPath();
-    ctx.roundRect(pos.x-tw/2,labelY,tw,18,6);
+    ctx.roundRect(lp.x-tw/2,lp.y,tw,lh,6);
     ctx.fill(); ctx.stroke();
     ctx.fillStyle="#fff";
     ctx.textAlign="center";
-    ctx.fillText(text,pos.x,labelY+13);
+    ctx.textBaseline="alphabetic";
+    ctx.fillText(text,lp.x,lp.y+13);
     ctx.restore();
   }
 }
@@ -2752,6 +2784,7 @@ const startRaceBtn = document.getElementById("startRaceBtn");
 function startRace(){
   if(raceStarted) return;
   raceStarted = true;
+  document.body.classList.add("race-active");
 
   // iPhone Safari sometimes reports stale canvas sizes while the intro overlay is visible.
   // Hide first, then resize once immediately and once shortly after.
