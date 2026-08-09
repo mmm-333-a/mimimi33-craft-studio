@@ -1622,21 +1622,42 @@ function parseJraRowText(text){
   }
 
   let jockey='';
+  const nonJockey=/^(?:美浦|栗東|牡|牝|鹿|栗|黒鹿|青鹿|白毛|芦毛)$/;
+
+  // JRAモバイル出馬表では「騎手名(57.0)」の形が最も安定する。
+  // 馬体重「524kg」などを 52.x の斤量と誤認しないよう、括弧付き斤量を最優先にする。
   for(const line of rawLines){
-    let m=line.match(/([A-Za-zＡ-Ｚａ-ｚ一-龯々ァ-ヶー・.．]{2,18})\s*[\(（]?\s*(?:5[0-9]|4[89]|6[0-2])(?:\.\d)?\s*[\)）]?/);
+    const m=line.match(/([A-Za-zＡ-Ｚａ-ｚ一-龯々ァ-ヶー・.．]{2,18})\s*[\(（]\s*(?:4[89]|5[0-9]|6[0-2])(?:\.\d)?\s*[\)）]/);
     if(m){
       let c=m[1].replace(/^[▲△☆★]/,'').trim();
-      // 性齢・毛色などを巻き込んだ場合は末尾の人名らしい部分を優先
       const jm=c.match(/([一-龯々]{2,6}|[A-ZＡ-Ｚ][.．・]?[ァ-ヶー]{2,12})$/);
-      jockey=(jm?jm[1]:c).trim();
-      break;
+      c=(jm?jm[1]:c).trim();
+      if(!nonJockey.test(c)){ jockey=c; break; }
     }
   }
+
   if(!jockey){
-    // 斤量が崩れた場合の補助。3行目の先頭側にある漢字人名を候補にする。
+    // OCRで括弧だけ欠落した場合の補助。
+    // 斤量の直後が数字や kg ではないことを必須にして、馬体重との混同を防ぐ。
+    for(const line of rawLines){
+      const m=line.match(/([A-Za-zＡ-Ｚａ-ｚ一-龯々ァ-ヶー・.．]{2,18})\s+(?:4[89]|5[0-9]|6[0-2])(?:\.\d)?(?=\s|$)(?!\s*kg)/i);
+      if(m){
+        let c=m[1].replace(/^[▲△☆★]/,'').trim();
+        const jm=c.match(/([一-龯々]{2,6}|[A-ZＡ-Ｚ][.．・]?[ァ-ヶー]{2,12})$/);
+        c=(jm?jm[1]:c).trim();
+        if(!nonJockey.test(c)){ jockey=c; break; }
+      }
+    }
+  }
+
+  if(!jockey){
+    // 最終補助。毛色・所属・性別など既知の非騎手語は明示的に除外する。
     for(let i=Math.min(2,rawLines.length-1);i<rawLines.length;i++){
-      const m=rawLines[i].match(/(?:^|\s)([一-龯々]{2,6})(?=\s|\(|（|\d|$)/);
-      if(m && !/美浦|栗東|牡|牝|鹿|栗|黒鹿|青鹿/.test(m[1])){ jockey=m[1]; break; }
+      const matches=[...rawLines[i].matchAll(/(?:^|\s)([一-龯々]{2,6})(?=\s|\(|（|\d|$)/g)];
+      for(const m of matches){
+        if(!nonJockey.test(m[1])){ jockey=m[1]; break; }
+      }
+      if(jockey) break;
     }
   }
   return {number,name,jockey,raw:rawLines.join(' / ')};
