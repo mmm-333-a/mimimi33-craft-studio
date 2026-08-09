@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v12.1</title>
+<title>ビーズ設計スタジオ v12.2</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1424,6 +1424,33 @@ select#candidateLimit{
   width:100%;
 }
 
+
+/* =========================================================
+   v12.2 Random full-design suggestions
+   ========================================================= */
+.random-setting-summary{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.random-card .template-mini-preview{
+  min-height:86px;
+}
+.random-style-badge{
+  display:inline-block;
+  padding:3px 8px;
+  border-radius:999px;
+  background:var(--theme-soft);
+  color:var(--sub);
+  font-size:12px;
+  font-weight:700;
+  margin-bottom:6px;
+}
+.random-card .template-usage{
+  margin-top:6px;
+}
+
 </style>
 </head>
 <body>
@@ -1456,7 +1483,7 @@ select#candidateLimit{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v12.1</h1>
+      <h1>ビーズ設計スタジオ v12.2</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -1758,6 +1785,7 @@ select#candidateLimit{
   <div class="pattern-subnav">
     <button class="pattern-subnav-btn active" data-pattern-view="custom">自作パターン</button>
     <button class="pattern-subnav-btn" data-pattern-view="suggest">デザイン案</button>
+    <button class="pattern-subnav-btn" data-pattern-view="random">🎲 おまかせ</button>
   </div>
 
   <div id="patternViewCustom" class="pattern-subview active">
@@ -1863,6 +1891,27 @@ select#candidateLimit{
         <div class="help">最初は8案だけ表示し、「もっと見る」で追加表示します。</div>
         <div id="templateGallery" class="template-gallery"></div>
         <button id="templateMore" class="secondary template-more" style="display:none">もっと見る</button>
+      </section>
+    </div>
+  </div>
+
+  <div id="patternViewRandom" class="pattern-subview">
+    <div class="panel-grid">
+      <section class="card">
+        <h2>🎲 おまかせデザイン</h2>
+        <div class="help">
+          「デザイン案」で設定したA〜Dのビーズ、透明度、使用量、アクセント設定と、③設計・計算の目標長さを使います。
+          目標長を超えない完成デザインを3案まとめて作ります。
+        </div>
+        <div class="random-setting-summary" id="randomSettingSummary"></div>
+        <button id="randomRegenerate" class="primary" style="margin-top:12px">🎲 もう一度3案つくる</button>
+        <div class="help note-accent">
+          同じ条件でも押すたびに並びが変わります。「この案を使う」で現在の完成デザインを置き換えます。
+        </div>
+      </section>
+      <section class="card">
+        <h2>今回のおまかせ3案</h2>
+        <div id="randomGallery" class="template-gallery"></div>
       </section>
     </div>
   </div>
@@ -2958,6 +3007,191 @@ select#candidateLimit{
     return `完成予定：${fmt(result.length)} mm / 差 ${d>0?"+":""}${fmt(d)} mm`;
   }
 
+
+  let randomSuggestionResults=[];
+
+  function randomChoice(arr){
+    return arr[Math.floor(Math.random()*arr.length)];
+  }
+  function weightedRandomKey(keys,boostMode="normal"){
+    const weighted=[];
+    keys.forEach(k=>{
+      let w=usageWeight(suggestionMaterials[k]?.usage);
+      if(boostMode==="accent" && k!=="A")w=Math.max(w,4);
+      if(boostMode==="main" && k==="A")w+=3;
+      for(let i=0;i<w;i++)weighted.push(k);
+    });
+    return randomChoice(weighted.length?weighted:keys);
+  }
+  function makeRandomUnit(style){
+    const keys=activeSuggestionKeys();
+    if(!keys.length)return [];
+    const targetLen=style==="free" ? 12+Math.floor(Math.random()*7) : 7+Math.floor(Math.random()*6);
+    const unit=[];
+    let last=null,run=0;
+    const maxRun=style==="free"?4:style==="accent"?3:2;
+
+    while(unit.length<targetLen){
+      let k=weightedRandomKey(keys,style==="accent"?"accent":style==="orderly"?"main":"normal");
+      let guard=0;
+      while(k===last && run>=maxRun && guard<20){
+        k=weightedRandomKey(keys,style==="accent"?"accent":"normal");
+        guard++;
+      }
+      unit.push(k);
+      if(k===last)run++; else{last=k;run=1;}
+    }
+
+    // 実際に設定されている種類を最低1回ずつ見せる
+    keys.forEach((k,i)=>{
+      if(!unit.includes(k)){
+        const pos=Math.min(unit.length-1,Math.floor((i+1)*unit.length/(keys.length+1)));
+        unit[pos]=k;
+      }
+    });
+    return unit;
+  }
+
+  function createRandomTemplate(style){
+    const active=activeSuggestionKeys();
+    if(style==="orderly"){
+      const pool=suggestionTemplates.filter(t=>t.need<=active.length);
+      const base=randomChoice(pool.length?pool:suggestionTemplates);
+      return {
+        ...base,
+        id:`random-orderly-${Date.now()}-${Math.random()}`,
+        name:"整然おまかせ",
+        desc:`${base.name}をベースにした規則的な並び`,
+        randomStyle:"orderly"
+      };
+    }
+
+    const unit=makeRandomUnit(style);
+    const useMirror=style==="accent" ? Math.random()<.45 : Math.random()<.25;
+    if(useMirror){
+      const centerKey=style==="accent" && active.length>1 ? randomChoice(active.slice(1)) : randomChoice(active);
+      return {
+        id:`random-${style}-${Date.now()}-${Math.random()}`,
+        name:style==="accent"?"アクセントおまかせ":"自由おまかせ",
+        need:new Set(unit).size,
+        type:"mirror",
+        half:unit.slice(0,Math.max(2,Math.floor(unit.length/2))),
+        center:[centerKey],
+        desc:style==="accent"?"差し色を意識した左右対称":"少し意外性のある左右対称",
+        randomStyle:style
+      };
+    }
+    return {
+      id:`random-${style}-${Date.now()}-${Math.random()}`,
+      name:style==="accent"?"アクセントおまかせ":"自由おまかせ",
+      need:new Set(unit).size,
+      type:style==="accent"?"accent":"repeat",
+      seq:unit,
+      desc:style==="accent"?"主役色に差し色を効かせた並び":"規則を残しつつランダム感を強めた並び",
+      randomStyle:style
+    };
+  }
+
+  function randomStyleLabel(style){
+    return style==="orderly"?"整然":style==="accent"?"アクセント":"自由";
+  }
+
+  function randomPreviewItems(items,max=24){
+    if(!items?.length)return [];
+    if(items.length<=max)return items.map(x=>({...x}));
+    const step=Math.max(1,Math.floor(items.length/max));
+    const out=[];
+    for(let i=0;i<items.length && out.length<max;i+=step)out.push({...items[i]});
+    return out;
+  }
+
+  function randomSettingsSummary(){
+    const host=$("randomSettingSummary");
+    if(!host)return;
+    const keys=activeSuggestionKeys();
+    const chips=[
+      `${keys.length}種類`,
+      `目標 ${fmt(targetMm())}mm`,
+      ...keys.map(k=>`${k}:${usageLabel(suggestionMaterials[k].usage)}・${opacityLabel(suggestionMaterials[k].opacity||"opaque")}`)
+    ];
+    if(accentEnabled)chips.push(`追加アクセント ${accentMaterial.count}個`);
+    host.innerHTML=chips.map(x=>`<span class="chip">${x}</span>`).join("");
+  }
+
+  function generateRandomSuggestions(){
+    const styles=["orderly","accent","free"];
+    randomSuggestionResults=styles.map(style=>{
+      let best=null;
+      // 数回試し、目標に最も近い有効案を採用
+      for(let attempt=0;attempt<12;attempt++){
+        const template=createRandomTemplate(style);
+        const result=generateSuggestionWithinTarget(template);
+        if(!result.valid || !result.items.length)continue;
+        const candidate={style,template,result};
+        if(!best || Math.abs(candidate.result.diff)<Math.abs(best.result.diff))best=candidate;
+      }
+      return best;
+    }).filter(Boolean);
+    renderRandomGallery();
+  }
+
+  function renderRandomGallery(){
+    const host=$("randomGallery");
+    if(!host)return;
+    randomSettingsSummary();
+    host.innerHTML="";
+
+    if(!randomSuggestionResults.length){
+      host.innerHTML='<div class="template-empty">この条件ではおまかせ案を生成できませんでした。ビーズ実寸や目標長を確認してください。</div>';
+      return;
+    }
+
+    randomSuggestionResults.forEach((entry,idx)=>{
+      const {style,template,result}=entry;
+      const card=document.createElement("div");
+      card.className="template-card random-card";
+      const actualKinds=actualSuggestionKinds(result.items);
+      card.innerHTML=`
+        <span class="random-style-badge">${randomStyleLabel(style)}</span>
+        <h3>${template.name}</h3>
+        <div class="template-meta">${actualKinds}種類 / ${suggestionTypeName(template.type)} — ${template.desc}</div>
+        <div class="template-sequence">${templateSequenceLabel(template)}</div>
+        <div class="template-mini-preview"></div>
+        <div class="template-usage">予想使用数：${usageSummaryText(result.items)}</div>
+        <div class="template-usage"><strong>${suggestionLengthLabel(result)}</strong></div>
+        <div class="actions"><button class="primary random-apply" data-random-index="${idx}">この案を使う</button></div>`;
+
+      const prev=card.querySelector(".template-mini-preview");
+      randomPreviewItems(result.items).forEach((item,i)=>{
+        const b=makeBead(item,i,"line");
+        b.classList.remove("design-item");
+        b.style.pointerEvents="none";
+        prev.appendChild(b);
+      });
+      host.appendChild(card);
+    });
+
+    host.querySelectorAll(".random-apply").forEach(btn=>{
+      btn.onclick=()=>applyRandomSuggestion(Number(btn.dataset.randomIndex));
+    });
+  }
+
+  function applyRandomSuggestion(index){
+    const entry=randomSuggestionResults[index];
+    if(!entry?.result?.items?.length)return;
+    const result=entry.result;
+    if(beads.length&&!confirm(
+      `現在の完成デザインを、このおまかせ案で置き換えますか？\n\n目標 ${fmt(result.target)} mm / 完成予定 ${fmt(result.length)} mm / 差 ${result.diff>0?"+":""}${fmt(result.diff)} mm`
+    ))return;
+
+    pushHistory();
+    beads.length=0;
+    result.items.forEach(b=>beads.push({...b}));
+    selectedItemIndex=null;
+    renderAll();
+    setTab("design");
+  }
+
   function renderTemplateGallery(){
     const host=$("templateGallery");if(!host)return;
     $("suggestTargetLabel").textContent=`${fmt(targetMm())} mm`;
@@ -3023,11 +3257,14 @@ select#candidateLimit{
     document.querySelectorAll(".pattern-subnav-btn").forEach(x=>x.classList.toggle("active",x===btn));
     $("patternViewCustom").classList.toggle("active",btn.dataset.patternView==="custom");
     $("patternViewSuggest").classList.toggle("active",btn.dataset.patternView==="suggest");
+    $("patternViewRandom").classList.toggle("active",btn.dataset.patternView==="random");
     if(btn.dataset.patternView==="suggest"){renderSuggestionMaterials();renderTemplateGallery()}
+    if(btn.dataset.patternView==="random"){generateRandomSuggestions()}
   });
-  $("suggestMaterialCount").addEventListener("change",()=>{suggestionVisibleCount=8;renderSuggestionMaterials();renderTemplateGallery()});
+  $("suggestMaterialCount").addEventListener("change",()=>{randomSuggestionResults=[];suggestionVisibleCount=8;renderSuggestionMaterials();renderTemplateGallery()});
   $("suggestTypeFilter").addEventListener("change",()=>{suggestionVisibleCount=8;renderTemplateGallery()});
   $("templateMore").onclick=()=>{suggestionVisibleCount+=8;renderTemplateGallery()};
+  $("randomRegenerate").onclick=generateRandomSuggestions;
 
   $("toggleAccent").onclick=()=>{
     accentEnabled=!accentEnabled;
@@ -3584,7 +3821,7 @@ select#candidateLimit{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"12.1",
+      app:"beads-design-studio",version:"12.2",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
