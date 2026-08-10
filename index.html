@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v12.8</title>
+<title>ビーズ設計スタジオ v12.8.1</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1828,7 +1828,7 @@ select#candidateLimit{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v12.8</h1>
+      <h1>ビーズ設計スタジオ v12.8.1</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -4368,8 +4368,16 @@ select#candidateLimit{
     // The element center always sits directly on the thread.
     // Width is kept inside its own physical-mm slot so neighbors don't overlap.
     if(shape==="oval"){
+      // 楕円は幅だけ実寸比例にすると高さが潰れやすいため、
+      // 丸ビーズ相当の厚みを最低保証する。
+      const roundLike=Math.max(footprint*.72,6.5);
       el.style.width=footprint+"px";
-      el.style.height=Math.max(2,footprint*.56)+"px";
+      el.style.height=Math.min(footprint*.78,roundLike)+"px";
+
+      // 小さい実寸でも「点」に見えない最低厚み。
+      if(parseFloat(el.style.height)<6.5){
+        el.style.height="6.5px";
+      }
     }else{
       el.style.width=footprint+"px";
       el.style.height=footprint+"px";
@@ -4480,7 +4488,7 @@ select#candidateLimit{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"12.8",
+      app:"beads-design-studio",version:"12.8.1",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
