@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v12.8.1</title>
+<title>ビーズ設計スタジオ v12.9</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1828,7 +1828,7 @@ select#candidateLimit{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v12.8.1</h1>
+      <h1>ビーズ設計スタジオ v12.9</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -2096,6 +2096,9 @@ select#candidateLimit{
             <button class="mini-btn" data-scale="big">大きめ</button>
           </div>
         </div>
+      </div>
+      <div id="uDisplayNote" class="help note-accent" style="display:none;margin:0 0 10px">
+        U字表示のビーズサイズは見やすさ優先のプレビューです。配置位置と長さ計算は実寸mmを使用するため、表示上ビーズが重なって見えても計算結果には影響しません。
       </div>
 
       <div class="preview-controls">
@@ -4361,26 +4364,27 @@ select#candidateLimit{
 
   function setUBeadVisualDimensions(el,item,pxPerMm){
     if(!el || item?.type==="part")return;
+
     const shape=item.shape||"round";
-    const physicalPx=Math.max(1,itemLength(item)*pxPerMm);
-    const footprint=Math.max(2.4,physicalPx*uVisualScaleFactor());
 
-    // The element center always sits directly on the thread.
-    // Width is kept inside its own physical-mm slot so neighbors don't overlap.
+    // v12.9:
+    // 表示サイズは実寸mmから分離し、視認性優先で決定する。
+    // 実寸mmは「配置位置」と「長さ計算」にだけ使用する。
+    const baseBySize={
+      s:{small:11,mid:15,big:20},
+      m:{small:14,mid:20,big:27},
+      l:{small:18,mid:27,big:36}
+    };
+
+    const mode=uScale==="big"?"big":uScale==="mid"?"mid":"small";
+    const base=(baseBySize[item.size]||baseBySize.m)[mode];
+
     if(shape==="oval"){
-      // 楕円は幅だけ実寸比例にすると高さが潰れやすいため、
-      // 丸ビーズ相当の厚みを最低保証する。
-      const roundLike=Math.max(footprint*.72,6.5);
-      el.style.width=footprint+"px";
-      el.style.height=Math.min(footprint*.78,roundLike)+"px";
-
-      // 小さい実寸でも「点」に見えない最低厚み。
-      if(parseFloat(el.style.height)<6.5){
-        el.style.height="6.5px";
-      }
+      el.style.width=Math.round(base*1.48)+"px";
+      el.style.height=Math.round(base*.82)+"px";
     }else{
-      el.style.width=footprint+"px";
-      el.style.height=footprint+"px";
+      el.style.width=base+"px";
+      el.style.height=base+"px";
     }
   }
 
@@ -4399,15 +4403,18 @@ select#candidateLimit{
 
     if(!beads.length){const e=document.createElement("div");e.className="empty";e.style.padding="20px";e.textContent="左の設定からビーズを追加してください。";canvas.appendChild(e);stage.appendChild(canvas);s.appendChild(stage);return}
     const mm=mmMap(),t=targetMm(),cur=currentMm(),pts=buildPathPoints(g),{cum,total}=polylineLengths(pts);
-    const displayMm=Math.max(t,cur,1);
-    const used=Math.min(1,cur/displayMm);
+
+    // 配置位置は実寸mmベース。
+    // 表示サイズは setUBeadVisualDimensions() 側で独立して決める。
+    const layoutMm=Math.max(t,cur,1);
+    const used=Math.min(1,cur/layoutMm);
     const start=uAnchor==="center"?Math.max(0,(1-used)/2):0;
-    const pxPerMm=total/displayMm;
+    const pxPerMm=total/layoutMm;
 
     let acc=0;
     beads.forEach((item,index)=>{
       const d=itemLength(item);
-      const ratio=Math.max(0,Math.min(1,start+(acc+d/2)/displayMm));
+      const ratio=Math.max(0,Math.min(1,start+(acc+d/2)/layoutMm));
       const p=pointAtRatio(pts,cum,total,ratio);
       const el=item.type==="part"?makePart(item,index,"u"):makeBead(item,index,"u");
       el.dataset.designIndex=String(index);
@@ -4436,7 +4443,7 @@ select#candidateLimit{
   function renderDesign(){
     $("hintText").textContent=(viewMode==="line"
       ?"直線表示ではドラッグで並び替え、クリックで挿入位置を選択できます。削除は「選択した1個を削除」を使います。"
-      :"U字表示は実寸mmに比例して配置し、全形状の中心をテグス上へ合わせています。目標超過時も端へ重ねず全体表示します。") + touchHintText();
+      :"U字表示は実寸mmで配置位置を決め、ビーズ自体は見やすい大きさで表示します。表示上は一部重なることがありますが、長さ計算には影響しません。") + touchHintText();
     viewMode==="line"?renderLine():renderU();
     const beadCount=beads.filter(x=>x.type!=="part").length;
     const partCount=beads.filter(x=>x.type==="part").length;
@@ -4488,7 +4495,7 @@ select#candidateLimit{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"12.8.1",
+      app:"beads-design-studio",version:"12.9",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
