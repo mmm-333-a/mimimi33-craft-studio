@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v12.6</title>
+<title>ビーズ設計スタジオ v12.8</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1704,6 +1704,98 @@ select#candidateLimit{
 .color-controls-disabled{opacity:.42;pointer-events:none}
 .opacity-btn[data-opacity="clear"]{min-width:150px}
 
+
+/* =========================================================
+   v12.7 Favorite color palette
+   ========================================================= */
+.favorite-color-panel{
+  margin-top:12px;
+  padding:10px;
+  border:1px solid #d8d9e3;
+  border-radius:12px;
+  background:rgba(255,255,255,.72);
+}
+.favorite-color-head{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+}
+.favorite-save-btn{
+  min-height:36px;
+  padding:7px 11px;
+}
+.favorite-color-list{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:9px;
+  min-height:42px;
+}
+.favorite-color-item{
+  position:relative;
+  width:42px;
+  height:42px;
+  border:1px solid #c8cad5;
+  border-radius:11px;
+  background:#fff;
+  padding:4px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.favorite-color-item .favorite-bead-preview{
+  width:28px;
+  height:28px;
+  pointer-events:none;
+}
+.favorite-color-item .favorite-bead-preview svg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+.favorite-color-item .favorite-delete{
+  position:absolute;
+  top:-7px;
+  right:-7px;
+  width:19px;
+  height:19px;
+  border-radius:50%;
+  border:1px solid #c8cad5;
+  background:#fff;
+  color:#555;
+  font-size:13px;
+  line-height:16px;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.favorite-color-item.favorite-selected{
+  outline:2px solid var(--sub);
+  outline-offset:1px;
+}
+.favorite-color-empty{
+  color:#777;
+  font-size:13px;
+  padding:8px 2px;
+}
+
+
+/* =========================================================
+   v12.8 U-view alignment / physical spacing
+   ========================================================= */
+.bead.svg-rendered.abs{
+  position:absolute!important;
+  transform:translate(-50%,-50%)!important;
+  transform-origin:center center!important;
+  margin:0!important;
+}
+.bead.svg-rendered.abs.shape-oval{
+  position:absolute!important;
+}
+
 </style>
 </head>
 <body>
@@ -1736,7 +1828,7 @@ select#candidateLimit{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v12.6</h1>
+      <h1>ビーズ設計スタジオ v12.8</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -1812,6 +1904,15 @@ select#candidateLimit{
         <button class="bead-palette-btn" data-color="#A98D7B" aria-label="#A98D7B"><span class="palette-bead-preview"></span></button>
         <button class="bead-palette-btn" data-color="#555555" aria-label="#555555"><span class="palette-bead-preview"></span></button>
         <button class="bead-palette-btn" data-color="#111111" aria-label="#111111"><span class="palette-bead-preview"></span></button>
+      </div>
+
+      <div class="favorite-color-panel">
+        <div class="favorite-color-head">
+          <strong>お気に入り色</strong>
+          <button id="saveFavoriteColorMain" class="secondary favorite-save-btn" type="button">＋ 現在の色を保存</button>
+        </div>
+        <div id="favoriteColorsMain" class="favorite-color-list"></div>
+        <div class="help">この端末・ブラウザに保存されます。色をタップすると現在色へ切り替え、×で削除できます。</div>
       </div>
 
       <label>個数</label>
@@ -2084,6 +2185,15 @@ select#candidateLimit{
       <button class="bead-palette-btn" data-color="#A98D7B" aria-label="#A98D7B"><span class="palette-bead-preview"></span></button>
       <button class="bead-palette-btn" data-color="#555555" aria-label="#555555"><span class="palette-bead-preview"></span></button>
       <button class="bead-palette-btn" data-color="#111111" aria-label="#111111"><span class="palette-bead-preview"></span></button>
+    </div>
+
+    <div class="favorite-color-panel">
+      <div class="favorite-color-head">
+        <strong>お気に入り色</strong>
+        <button id="saveFavoriteColorPattern" class="secondary favorite-save-btn" type="button">＋ 現在の色を保存</button>
+      </div>
+      <div id="favoriteColorsPattern" class="favorite-color-list"></div>
+      <div class="help">デザインタブと同じお気に入り色を共有します。</div>
     </div>
 
     <label>個数</label>
@@ -2446,6 +2556,121 @@ select#candidateLimit{
 
 
   // bead library
+
+  const FAVORITE_COLOR_KEY="beadsDesignStudio_favoriteColors_v1";
+  const favoriteColors=[];
+
+  function loadFavoriteColors(){
+    favoriteColors.length=0;
+    try{
+      const raw=localStorage.getItem(FAVORITE_COLOR_KEY);
+      const arr=raw?JSON.parse(raw):[];
+      if(Array.isArray(arr)){
+        arr.forEach(v=>{
+          const c=String(v||"").toUpperCase();
+          if(/^#[0-9A-F]{6}$/.test(c) && !favoriteColors.includes(c)){
+            favoriteColors.push(c);
+          }
+        });
+      }
+    }catch(e){}
+    renderFavoriteColors();
+  }
+
+  function saveFavoriteColors(){
+    try{
+      localStorage.setItem(FAVORITE_COLOR_KEY,JSON.stringify(favoriteColors));
+    }catch(e){}
+    renderFavoriteColors();
+  }
+
+  function currentEditableColor(){
+    return selectedOpacity==="clear" ? null : $("color").value.toUpperCase();
+  }
+
+  function addCurrentFavoriteColor(){
+    const c=currentEditableColor();
+    if(!c){
+      alert("クリア（無色透明）はお気に入り色へ保存できません。色付きビーズを選択してください。");
+      return;
+    }
+    if(!favoriteColors.includes(c)){
+      favoriteColors.push(c);
+      saveFavoriteColors();
+    }else{
+      renderFavoriteColors();
+    }
+  }
+
+  function deleteFavoriteColor(color){
+    const idx=favoriteColors.indexOf(color);
+    if(idx>=0){
+      favoriteColors.splice(idx,1);
+      saveFavoriteColors();
+    }
+  }
+
+  function applyFavoriteColor(color){
+    if(selectedOpacity==="clear"){
+      selectedOpacity="opaque";
+      syncOpacityButtons();
+    }
+    setColor(color);
+    renderFavoriteColors();
+  }
+
+  function renderFavoriteColors(){
+    ["favoriteColorsMain","favoriteColorsPattern"].forEach(id=>{
+      const host=$(id);
+      if(!host)return;
+      host.innerHTML="";
+
+      if(!favoriteColors.length){
+        host.innerHTML='<div class="favorite-color-empty">まだ保存色はありません。</div>';
+        return;
+      }
+
+      favoriteColors.forEach(color=>{
+        const wrap=document.createElement("button");
+        wrap.type="button";
+        wrap.className="favorite-color-item";
+        wrap.title=`${color} を使用`;
+        wrap.dataset.color=color;
+
+        const preview=document.createElement("span");
+        preview.className="favorite-bead-preview";
+        preview.innerHTML=beadSvgMarkup({
+          size:"m",
+          shape:"round",
+          color,
+          opacity:selectedOpacity==="semi"?"semi":"opaque"
+        });
+
+        const del=document.createElement("button");
+        del.type="button";
+        del.className="favorite-delete";
+        del.textContent="×";
+        del.title=`${color} を削除`;
+
+        del.addEventListener("click",ev=>{
+          ev.stopPropagation();
+          deleteFavoriteColor(color);
+        });
+
+        wrap.addEventListener("click",()=>applyFavoriteColor(color));
+        wrap.appendChild(preview);
+        wrap.appendChild(del);
+
+        wrap.classList.toggle(
+          "favorite-selected",
+          selectedOpacity!=="clear" && $("color").value.toUpperCase()===color
+        );
+
+        host.appendChild(wrap);
+      });
+    });
+  }
+
   const LIBRARY_KEY="beadsDesignStudio_beadLibrary_v1";
   const shapeNameMap={round:"丸",oval:"楕円",star:"星",heart:"ハート",diamond:"菱形"};
 
@@ -2733,6 +2958,7 @@ select#candidateLimit{
     if(selectedOpacity==="clear")return;
     syncColorFields(v);
     renderBeadPalettes();
+    renderFavoriteColors();
     renderPatternSelectedInfo();
   }
 
@@ -2765,6 +2991,9 @@ select#candidateLimit{
       renderPatternSelectedInfo();
     });
   });
+
+  if($("saveFavoriteColorMain"))$("saveFavoriteColorMain").onclick=addCurrentFavoriteColor;
+  if($("saveFavoriteColorPattern"))$("saveFavoriteColorPattern").onclick=addCurrentFavoriteColor;
 
   $("qty").addEventListener("change",()=>syncQty($("qty").value));
   $("patternQty").addEventListener("change",renderPatternSelectedInfo);
@@ -3809,6 +4038,7 @@ select#candidateLimit{
     document.querySelectorAll(".opacity-btn").forEach(b=>b.classList.toggle("active",b.dataset.opacity===selectedOpacity));
     syncColorAvailability();
     renderBeadPalettes();
+    renderFavoriteColors();
   }
   function syncColorAvailability(){
     const clearMode=selectedOpacity==="clear";
@@ -3949,8 +4179,9 @@ select#candidateLimit{
       el.className=`bead svg-rendered ${cls[b.size]} design-item shape-${shape} opacity-${opacity}`;
     }
 
-    // 楕円だけ横長。既存サイズ感を大きく変えない。
-    if(shape==="oval"){
+    // 直線表示では従来の楕円サイズを維持。
+    // U字表示は実寸mmと曲線の縮尺から後で寸法を決める。
+    if(shape==="oval" && mode!=="u"){
       const widths={s:"28px",m:"40px",l:"56px"};
       el.style.width=widths[b.size]||"40px";
     }
@@ -4123,6 +4354,28 @@ select#candidateLimit{
   function endpoint(canvas,clsname,x,y){
     const e=document.createElement("div");e.className="endpoint-part "+clsname;e.style.left=x+"px";e.style.top=y+"px";canvas.appendChild(e);
   }
+
+  function uVisualScaleFactor(){
+    return uScale==="big"?.94:uScale==="mid"?.86:.76;
+  }
+
+  function setUBeadVisualDimensions(el,item,pxPerMm){
+    if(!el || item?.type==="part")return;
+    const shape=item.shape||"round";
+    const physicalPx=Math.max(1,itemLength(item)*pxPerMm);
+    const footprint=Math.max(2.4,physicalPx*uVisualScaleFactor());
+
+    // The element center always sits directly on the thread.
+    // Width is kept inside its own physical-mm slot so neighbors don't overlap.
+    if(shape==="oval"){
+      el.style.width=footprint+"px";
+      el.style.height=Math.max(2,footprint*.56)+"px";
+    }else{
+      el.style.width=footprint+"px";
+      el.style.height=footprint+"px";
+    }
+  }
+
   function renderU(){
     const s=$("strand");s.className="";s.innerHTML="";
     const g=uGeometry(),stage=document.createElement("div");stage.className="u-stage";stage.style.height=(g.height+36)+"px";
@@ -4137,13 +4390,22 @@ select#candidateLimit{
     if($("showClasp").checked)endpoint(canvas,"clasp",g.rightX+14,g.topY-18);
 
     if(!beads.length){const e=document.createElement("div");e.className="empty";e.style.padding="20px";e.textContent="左の設定からビーズを追加してください。";canvas.appendChild(e);stage.appendChild(canvas);s.appendChild(stage);return}
-    const mm=mmMap(),t=targetMm(),cur=currentMm(),pts=buildPathPoints(g),{cum,total}=polylineLengths(pts),used=Math.min(1,cur/t),start=uAnchor==="center"?Math.max(0,(1-used)/2):0;
+    const mm=mmMap(),t=targetMm(),cur=currentMm(),pts=buildPathPoints(g),{cum,total}=polylineLengths(pts);
+    const displayMm=Math.max(t,cur,1);
+    const used=Math.min(1,cur/displayMm);
+    const start=uAnchor==="center"?Math.max(0,(1-used)/2):0;
+    const pxPerMm=total/displayMm;
+
     let acc=0;
     beads.forEach((item,index)=>{
-      const d=itemLength(item),ratio=Math.min(1,start+(acc+d/2)/t),p=pointAtRatio(pts,cum,total,ratio);
+      const d=itemLength(item);
+      const ratio=Math.max(0,Math.min(1,start+(acc+d/2)/displayMm));
+      const p=pointAtRatio(pts,cum,total,ratio);
       const el=item.type==="part"?makePart(item,index,"u"):makeBead(item,index,"u");
       el.dataset.designIndex=String(index);
-      el.style.left=p[0]+"px";el.style.top=p[1]+"px";
+      el.style.left=p[0]+"px";
+      el.style.top=p[1]+"px";
+      if(item.type!=="part")setUBeadVisualDimensions(el,item,pxPerMm);
       if(index===selectedItemIndex)el.classList.add("selected");
       el.onclick=()=>{
         selectedItemIndex=(selectedItemIndex===index?null:index);
@@ -4166,7 +4428,7 @@ select#candidateLimit{
   function renderDesign(){
     $("hintText").textContent=(viewMode==="line"
       ?"直線表示ではドラッグで並び替え、クリックで挿入位置を選択できます。削除は「選択した1個を削除」を使います。"
-      :"U字全体を目標長さとして、累積mm位置に配置しています。") + touchHintText();
+      :"U字表示は実寸mmに比例して配置し、全形状の中心をテグス上へ合わせています。目標超過時も端へ重ねず全体表示します。") + touchHintText();
     viewMode==="line"?renderLine():renderU();
     const beadCount=beads.filter(x=>x.type!=="part").length;
     const partCount=beads.filter(x=>x.type==="part").length;
@@ -4218,7 +4480,7 @@ select#candidateLimit{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"12.6",
+      app:"beads-design-studio",version:"12.8",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
@@ -4537,6 +4799,7 @@ select#candidateLimit{
   select.addEventListener("change",()=>applyTheme(select.value));
 })();
 
+  loadFavoriteColors();
   syncOpacityButtons();
 </script>
 
