@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v12.9.1</title>
+<title>ビーズ設計スタジオ v12.9.2</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1860,6 +1860,37 @@ select#candidateLimit{
   }
 }
 
+
+/* =========================================================
+   v12.9.2 Mobile header compaction
+   ========================================================= */
+@media (max-width: 700px){
+  .metrics{gap:6px!important}
+  .metric{
+    min-height:60px!important;
+    padding:7px 9px!important;
+    border-radius:11px!important;
+  }
+  .metric .k{
+    font-size:10.5px!important;
+    line-height:1.1!important;
+    margin-bottom:2px!important;
+  }
+  .metric .v{
+    font-size:19px!important;
+    line-height:1!important;
+  }
+}
+@media (max-width: 430px){
+  .metrics{gap:5px!important}
+  .metric{
+    min-height:56px!important;
+    padding:6px 8px!important;
+  }
+  .metric .k{font-size:10px!important}
+  .metric .v{font-size:18px!important}
+}
+
 </style>
 </head>
 <body>
@@ -1892,7 +1923,7 @@ select#candidateLimit{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v12.9.1</h1>
+      <h1>ビーズ設計スタジオ v12.9.2</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -1948,9 +1979,9 @@ select#candidateLimit{
       <div class="opacity-row">
         <button class="opacity-btn active" data-opacity="opaque">不透明</button>
         <button class="opacity-btn" data-opacity="semi">半透明</button>
-        <button class="opacity-btn" data-opacity="clear">クリア（無色透明）</button>
+        <button class="opacity-btn" data-opacity="clear">クリア</button>
       </div>
-      <div class="help" style="margin-top:6px">色付きビーズは「不透明」または「半透明」。クリアは無色透明のみです。</div>
+      <div class="help" style="margin-top:6px">色付きビーズは「不透明」または「半透明」。クリア＝無色透明です。</div>
 
       <label>色</label>
       <div class="row">
@@ -2210,7 +2241,7 @@ select#candidateLimit{
 <div class="panel-grid">
   <section class="card">
     <h2>パターン用ビーズ設定</h2>
-    <div class="help">サイズ・形状・色・透明度はデザインタブと共有します。クリア選択時は色なしの透明ビーズになります。自作パターンの個数は1〜20個から選択します。</div>
+    <div class="help">サイズ・形状・色・透明度はデザインタブと共有します。クリア選択時は無色透明ビーズになります。自作パターンの個数は1〜20個から選択します。</div>
 
     <label>サイズ</label>
     <div class="size-row" id="patternSizeRow">
@@ -2232,9 +2263,9 @@ select#candidateLimit{
     <div class="opacity-row" id="patternOpacityRow">
       <button class="opacity-btn active" data-opacity="opaque">不透明</button>
       <button class="opacity-btn" data-opacity="semi">半透明</button>
-      <button class="opacity-btn" data-opacity="clear">クリア（無色透明）</button>
+      <button class="opacity-btn" data-opacity="clear">クリア</button>
     </div>
-    <div class="help" style="margin-top:6px">色付きビーズは「不透明」または「半透明」。クリアは無色透明のみです。</div>
+    <div class="help" style="margin-top:6px">色付きビーズは「不透明」または「半透明」。クリア＝無色透明です。</div>
 
     <label>色</label>
     <div class="row">
@@ -3386,7 +3417,7 @@ select#candidateLimit{
         <select data-sk="${key}" data-sf="opacity">
           <option value="opaque"${(m.opacity||"opaque")==="opaque"?" selected":""}>不透明</option>
           <option value="semi"${m.opacity==="semi"?" selected":""}>半透明</option>
-          <option value="clear"${m.opacity==="clear"?" selected":""}>クリア（無色透明）</option>
+          <option value="clear"${m.opacity==="clear"?" selected":""}>クリア</option>
         </select>
       </div>
       <div class="usage-row">
@@ -4559,7 +4590,7 @@ select#candidateLimit{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"12.9.1",
+      app:"beads-design-studio",version:"12.9.2",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
