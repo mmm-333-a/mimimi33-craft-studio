@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-<title>ビーズ設計スタジオ v12.4</title>
+<title>ビーズ設計スタジオ v12.6</title>
 <style>
 :root{
   --base:#f5f5f5; --sub:var(--theme-main,#5A2E7A); --accent:#b22222; --text:#222;
@@ -1690,6 +1690,20 @@ select#candidateLimit{
   mix-blend-mode:screen;
 }
 
+
+/* v12.5 material cleanup */
+.bead-palette{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.bead-palette .bead-palette-btn{
+  width:44px;height:44px;padding:4px;border:1px solid #c9cbd7;border-radius:12px;
+  background:#fff!important;display:flex;align-items:center;justify-content:center
+}
+.bead-palette .bead-palette-btn:hover{border-color:var(--sub)}
+.bead-palette .bead-palette-btn.palette-selected{outline:2px solid var(--sub);outline-offset:1px}
+.bead-palette .palette-bead-preview{display:block;width:30px;height:30px;pointer-events:none}
+.bead-palette .palette-bead-preview svg{width:100%;height:100%;display:block}
+.color-controls-disabled{opacity:.42;pointer-events:none}
+.opacity-btn[data-opacity="clear"]{min-width:150px}
+
 </style>
 </head>
 <body>
@@ -1722,7 +1736,7 @@ select#candidateLimit{
 <header>
   <div class="header-top">
     <div>
-      <h1>ビーズ設計スタジオ v12.4</h1>
+      <h1>ビーズ設計スタジオ v12.6</h1>
       <p>デザイン・パターン・計算・保存をタブで整理し、左右対称アシストを追加しました。</p>
     </div>
     <div class="project-inline">
@@ -1778,29 +1792,26 @@ select#candidateLimit{
       <div class="opacity-row">
         <button class="opacity-btn active" data-opacity="opaque">不透明</button>
         <button class="opacity-btn" data-opacity="semi">半透明</button>
-        <button class="opacity-btn" data-opacity="clear">透明</button>
+        <button class="opacity-btn" data-opacity="clear">クリア（無色透明）</button>
       </div>
-      <div class="row" style="margin-top:7px">
-        <button id="clearColorMain" class="secondary" type="button">無色クリア</button>
-      </div>
-      <div class="help" style="margin-top:6px">透明度と色は別に指定できます。透明＋青なら透明ブルー、無色クリアは色なしの透明です。</div>
+      <div class="help" style="margin-top:6px">色付きビーズは「不透明」または「半透明」。クリアは無色透明のみです。</div>
 
       <label>色</label>
       <div class="row">
         <input id="color" type="color" value="#8F78B5">
         <input id="hex" type="text" value="#8F78B5" maxlength="7">
       </div>
-      <div class="palette">
-        <button data-color="#FFFFFF" style="background:#fff"></button>
-        <button data-color="#F5E6CC" style="background:#F5E6CC"></button>
-        <button data-color="#E7C9C9" style="background:#E7C9C9"></button>
-        <button data-color="#8F78B5" style="background:#8F78B5"></button>
-        <button data-color="#32AECD" style="background:#32AECD"></button>
-        <button data-color="#7EA7A0" style="background:#7EA7A0"></button>
-        <button data-color="#C8A96B" style="background:#C8A96B"></button>
-        <button data-color="#A98D7B" style="background:#A98D7B"></button>
-        <button data-color="#555555" style="background:#555"></button>
-        <button data-color="#111111" style="background:#111"></button>
+      <div class="palette bead-palette" id="mainPalette">
+        <button class="bead-palette-btn" data-color="#FFFFFF" aria-label="#FFFFFF"><span class="palette-bead-preview"></span></button>
+        <button class="bead-palette-btn" data-color="#F5E6CC" aria-label="#F5E6CC"><span class="palette-bead-preview"></span></button>
+        <button class="bead-palette-btn" data-color="#E7C9C9" aria-label="#E7C9C9"><span class="palette-bead-preview"></span></button>
+        <button class="bead-palette-btn" data-color="#8F78B5" aria-label="#8F78B5"><span class="palette-bead-preview"></span></button>
+        <button class="bead-palette-btn" data-color="#32AECD" aria-label="#32AECD"><span class="palette-bead-preview"></span></button>
+        <button class="bead-palette-btn" data-color="#7EA7A0" aria-label="#7EA7A0"><span class="palette-bead-preview"></span></button>
+        <button class="bead-palette-btn" data-color="#C8A96B" aria-label="#C8A96B"><span class="palette-bead-preview"></span></button>
+        <button class="bead-palette-btn" data-color="#A98D7B" aria-label="#A98D7B"><span class="palette-bead-preview"></span></button>
+        <button class="bead-palette-btn" data-color="#555555" aria-label="#555555"><span class="palette-bead-preview"></span></button>
+        <button class="bead-palette-btn" data-color="#111111" aria-label="#111111"><span class="palette-bead-preview"></span></button>
       </div>
 
       <label>個数</label>
@@ -2031,7 +2042,7 @@ select#candidateLimit{
 <div class="panel-grid">
   <section class="card">
     <h2>パターン用ビーズ設定</h2>
-    <div class="help">サイズ・形状・色・透明度はデザインタブと共有します。自作パターンの個数は1〜20個から選択します。</div>
+    <div class="help">サイズ・形状・色・透明度はデザインタブと共有します。クリア選択時は色なしの透明ビーズになります。自作パターンの個数は1〜20個から選択します。</div>
 
     <label>サイズ</label>
     <div class="size-row" id="patternSizeRow">
@@ -2053,29 +2064,26 @@ select#candidateLimit{
     <div class="opacity-row" id="patternOpacityRow">
       <button class="opacity-btn active" data-opacity="opaque">不透明</button>
       <button class="opacity-btn" data-opacity="semi">半透明</button>
-      <button class="opacity-btn" data-opacity="clear">透明</button>
+      <button class="opacity-btn" data-opacity="clear">クリア（無色透明）</button>
     </div>
-    <div class="row" style="margin-top:7px">
-      <button id="clearColorPattern" class="secondary" type="button">無色クリア</button>
-    </div>
-    <div class="help" style="margin-top:6px">透明度はデザインタブと共有します。透明色も選択できます。</div>
+    <div class="help" style="margin-top:6px">色付きビーズは「不透明」または「半透明」。クリアは無色透明のみです。</div>
 
     <label>色</label>
     <div class="row">
       <input id="patternColor" type="color" value="#8F78B5">
       <input id="patternHex" type="text" value="#8F78B5" maxlength="7">
     </div>
-    <div class="palette" id="patternPalette">
-      <button data-color="#FFFFFF" style="background:#fff"></button>
-      <button data-color="#F5E6CC" style="background:#F5E6CC"></button>
-      <button data-color="#E7C9C9" style="background:#E7C9C9"></button>
-      <button data-color="#8F78B5" style="background:#8F78B5"></button>
-      <button data-color="#32AECD" style="background:#32AECD"></button>
-      <button data-color="#7EA7A0" style="background:#7EA7A0"></button>
-      <button data-color="#C8A96B" style="background:#C8A96B"></button>
-      <button data-color="#A98D7B" style="background:#A98D7B"></button>
-      <button data-color="#555555" style="background:#555"></button>
-      <button data-color="#111111" style="background:#111"></button>
+    <div class="palette bead-palette" id="patternPalette">
+      <button class="bead-palette-btn" data-color="#FFFFFF" aria-label="#FFFFFF"><span class="palette-bead-preview"></span></button>
+      <button class="bead-palette-btn" data-color="#F5E6CC" aria-label="#F5E6CC"><span class="palette-bead-preview"></span></button>
+      <button class="bead-palette-btn" data-color="#E7C9C9" aria-label="#E7C9C9"><span class="palette-bead-preview"></span></button>
+      <button class="bead-palette-btn" data-color="#8F78B5" aria-label="#8F78B5"><span class="palette-bead-preview"></span></button>
+      <button class="bead-palette-btn" data-color="#32AECD" aria-label="#32AECD"><span class="palette-bead-preview"></span></button>
+      <button class="bead-palette-btn" data-color="#7EA7A0" aria-label="#7EA7A0"><span class="palette-bead-preview"></span></button>
+      <button class="bead-palette-btn" data-color="#C8A96B" aria-label="#C8A96B"><span class="palette-bead-preview"></span></button>
+      <button class="bead-palette-btn" data-color="#A98D7B" aria-label="#A98D7B"><span class="palette-bead-preview"></span></button>
+      <button class="bead-palette-btn" data-color="#555555" aria-label="#555555"><span class="palette-bead-preview"></span></button>
+      <button class="bead-palette-btn" data-color="#111111" aria-label="#111111"><span class="palette-bead-preview"></span></button>
     </div>
 
     <label>個数</label>
@@ -2167,11 +2175,11 @@ select#candidateLimit{
 
       <h3>実寸設定</h3>
       <div class="mm-grid">
-        <div class="mm-box"><label>小 (mm)</label><input id="mmS" type="number" min="0.1" step="0.1" value="3"></div>
-        <div class="mm-box"><label>中 (mm)</label><input id="mmM" type="number" min="0.1" step="0.1" value="4"></div>
-        <div class="mm-box"><label>大 (mm)</label><input id="mmL" type="number" min="0.1" step="0.1" value="6"></div>
+        <div class="mm-box"><label>小 (mm)</label><select id="mmS"><option value="2" selected>2 mm</option><option value="3">3 mm</option><option value="4">4 mm</option><option value="5">5 mm</option><option value="6">6 mm</option></select></div>
+        <div class="mm-box"><label>中 (mm)</label><select id="mmM"><option value="2">2 mm</option><option value="3" selected>3 mm</option><option value="4">4 mm</option><option value="5">5 mm</option><option value="6">6 mm</option></select></div>
+        <div class="mm-box"><label>大 (mm)</label><select id="mmL"><option value="2">2 mm</option><option value="3">3 mm</option><option value="4">4 mm</option><option value="5">5 mm</option><option value="6" selected>6 mm</option></select></div>
       </div>
-      <div class="help note-accent">長さはビーズ直径の合計による理論値です。金具・端部余白などは含みません。</div>
+      <div class="help note-accent">実寸は2〜6mmから選択できます。初期値は 小=2mm / 中=3mm / 大=6mm。長さは選択した実寸の合計による理論値で、金具・端部余白などは含みません。</div>
     </section>
 
     <section class="card round">
@@ -2317,10 +2325,25 @@ select#candidateLimit{
   const sizeName={s:"小",m:"中",l:"大"};
   const cls={s:"s",m:"m",l:"l"};
 
+  function setMmSelectValue(id,value,fallback){
+    const el=$(id);
+    if(!el)return;
+    const n=Number(value);
+    const safe=Number.isFinite(n)&&n>0?n:fallback;
+    const s=String(safe);
+    if(![...el.options].some(o=>o.value===s)){
+      const opt=document.createElement("option");
+      opt.value=s;
+      opt.textContent=`${safe} mm（保存値）`;
+      el.appendChild(opt);
+    }
+    el.value=s;
+  }
+
   function mmMap(){
     return {
-      s:Math.max(.1,Number($("mmS").value)||3),
-      m:Math.max(.1,Number($("mmM").value)||4),
+      s:Math.max(.1,Number($("mmS").value)||2),
+      m:Math.max(.1,Number($("mmM").value)||3),
       l:Math.max(.1,Number($("mmL").value)||6)
     };
   }
@@ -2339,9 +2362,33 @@ select#candidateLimit{
   function currentMm(){return beads.reduce((a,b)=>a+itemLength(b),0)}
   function beadOnlyMm(){return beads.filter(x=>x.type!=="part").reduce((a,b)=>a+itemLength(b),0)}
   function fmt(n){return Number.isInteger(n)?String(n):n.toFixed(1).replace(/\.0$/,"")}
-  function selectedBead(){return {size:selectedSize,shape:selectedShape,color:$("color").value.toUpperCase(),opacity:selectedOpacity}}
+  function normalizeBeadMaterial(b){
+    const out={...b};
+    const opacity=out.opacity||"opaque";
+    const color=String(out.color||"#FFFFFF").toUpperCase();
+    if(opacity==="clear" && color!=="#FFFFFF"){
+      out.opacity="semi";
+      out.color=color;
+    }else if(opacity==="clear"){
+      out.opacity="clear";
+      out.color="#FFFFFF";
+    }else{
+      out.opacity=opacity==="semi"?"semi":"opaque";
+      out.color=color;
+    }
+    return out;
+  }
+  function selectedBead(){
+    return normalizeBeadMaterial({
+      size:selectedSize,shape:selectedShape,
+      color:selectedOpacity==="clear"?"#FFFFFF":$("color").value.toUpperCase(),
+      opacity:selectedOpacity
+    });
+  }
   function safeName(s){return (s||"beads_design").replace(/[\\/:*?"<>|]/g,"_").trim()||"beads_design"}
-  function cloneItems(arr){return arr.map(x=>({...x}))}
+  function cloneItems(arr){
+    return arr.map(x=>x?.type==="part"?({...x}):normalizeBeadMaterial(x));
+  }
   function snapshotState(){
     return {
       beads:cloneItems(beads),
@@ -2682,7 +2729,12 @@ select#candidateLimit{
     if(/^#[0-9A-Fa-f]{6}$/.test(v))setColor(v);
     else{$("patternHex").value=$("color").value.toUpperCase();alert("色は #RRGGBB 形式で入力してください。")}
   };
-  function setColor(v){syncColorFields(v);renderPatternSelectedInfo()}
+  function setColor(v){
+    if(selectedOpacity==="clear")return;
+    syncColorFields(v);
+    renderBeadPalettes();
+    renderPatternSelectedInfo();
+  }
 
   function addSelectedBeadsAt(where){
     pushHistory();
@@ -2708,19 +2760,11 @@ select#candidateLimit{
   document.querySelectorAll(".opacity-btn").forEach(btn=>{
     btn.addEventListener("click",()=>{
       selectedOpacity=btn.dataset.opacity||"opaque";
+      if(selectedOpacity==="clear")syncColorFields("#FFFFFF");
       syncOpacityButtons();
       renderPatternSelectedInfo();
     });
   });
-
-  function chooseColorlessClear(){
-    selectedOpacity="clear";
-    syncOpacityButtons();
-    setColor("#FFFFFF");
-    renderPatternSelectedInfo();
-  }
-  if($("clearColorMain"))$("clearColorMain").onclick=chooseColorlessClear;
-  if($("clearColorPattern"))$("clearColorPattern").onclick=chooseColorlessClear;
 
   $("qty").addEventListener("change",()=>syncQty($("qty").value));
   $("patternQty").addEventListener("change",renderPatternSelectedInfo);
@@ -2735,7 +2779,8 @@ select#candidateLimit{
   $("clear").onclick=()=>{if(beads.length&&confirm("配置したビーズをすべて消去しますか？")){pushHistory();beads.length=0;renderAll()}};
   $("showNumbers").onchange=renderDesign;
   ["showThread","showGlassesEnds","showClasp","showRings"].forEach(id=>$(id).onchange=renderDesign);
-  ["mmS","mmM","mmL","targetLength"].forEach(id=>$(id).addEventListener("input",()=>renderAll()));
+  ["mmS","mmM","mmL"].forEach(id=>$(id).addEventListener("change",()=>renderAll()));
+  $("targetLength").addEventListener("input",()=>renderAll());
   $("projectName").addEventListener("input",renderRecipeSummary);
   $("projectType").addEventListener("change",renderRecipeSummary);
 
@@ -3024,7 +3069,10 @@ select#candidateLimit{
   const accentMaterial={size:"l",shape:"round",color:"#F5E6CC",count:5,placement:"even"};
 
   function suggestionTypeName(t){return t==="mirror"?"左右対称":t==="accent"?"アクセント":"繰り返し"}
-  function cloneSuggestionMaterial(k){const m=suggestionMaterials[k];return {size:m.size,shape:m.shape,color:m.color.toUpperCase(),opacity:m.opacity||"opaque",source:k}}
+  function cloneSuggestionMaterial(k){
+    const m=suggestionMaterials[k];
+    return normalizeBeadMaterial({size:m.size,shape:m.shape,color:m.color.toUpperCase(),opacity:m.opacity||"opaque",source:k});
+  }
   function suggestionShapeName(s){return s==="round"?"丸":s==="oval"?"楕円":s==="star"?"星":s==="heart"?"ハート":"菱形"}
   function renderSuggestionMaterials(){
     const host=$("suggestMaterials"); if(!host)return;
@@ -3042,7 +3090,7 @@ select#candidateLimit{
         <select data-sk="${key}" data-sf="opacity">
           <option value="opaque"${(m.opacity||"opaque")==="opaque"?" selected":""}>不透明</option>
           <option value="semi"${m.opacity==="semi"?" selected":""}>半透明</option>
-          <option value="clear"${m.opacity==="clear"?" selected":""}>透明</option>
+          <option value="clear"${m.opacity==="clear"?" selected":""}>クリア（無色透明）</option>
         </select>
       </div>
       <div class="usage-row">
@@ -3061,11 +3109,16 @@ select#candidateLimit{
         if(field==="hex"){
           if(!/^#[0-9A-Fa-f]{6}$/.test(el.value.trim()))return;
           suggestionMaterials[key].color=el.value.trim().toUpperCase();
+          if(suggestionMaterials[key].opacity==="clear")suggestionMaterials[key].opacity="semi";
           host.querySelector(`[data-sk="${key}"][data-sf="color"]`).value=el.value.trim();
         }else if(field==="color"){
           suggestionMaterials[key].color=el.value.toUpperCase();
+          if(suggestionMaterials[key].opacity==="clear")suggestionMaterials[key].opacity="semi";
           host.querySelector(`[data-sk="${key}"][data-sf="hex"]`).value=suggestionMaterials[key].color;
-        }else suggestionMaterials[key][field]=el.value;
+        }else{
+          suggestionMaterials[key][field]=el.value;
+          if(field==="opacity" && el.value==="clear")suggestionMaterials[key].color="#FFFFFF";
+        }
         if(field==="usage"){renderSuggestionMaterials();renderTemplateGallery();return}
         renderSuggestionMaterialPreview(key);renderTemplateGallery();
       });
@@ -3729,7 +3782,7 @@ select#candidateLimit{
 
 
   function opacityLabel(v){
-    return v==="clear"?"透明":v==="semi"?"半透明":"不透明";
+    return v==="clear"?"クリア（無色透明）":v==="semi"?"半透明":"不透明";
   }
   function opacityAlpha(v){
     return v==="clear"?.46:v==="semi"?.72:1;
@@ -3754,6 +3807,32 @@ select#candidateLimit{
   }
   function syncOpacityButtons(){
     document.querySelectorAll(".opacity-btn").forEach(b=>b.classList.toggle("active",b.dataset.opacity===selectedOpacity));
+    syncColorAvailability();
+    renderBeadPalettes();
+  }
+  function syncColorAvailability(){
+    const clearMode=selectedOpacity==="clear";
+    ["color","hex","patternColor","patternHex"].forEach(id=>{
+      const el=$(id); if(!el)return;
+      el.disabled=clearMode;
+      el.closest?.(".row")?.classList.toggle("color-controls-disabled",clearMode);
+    });
+    ["mainPalette","patternPalette"].forEach(id=>{
+      const el=$(id); if(el)el.classList.toggle("color-controls-disabled",clearMode);
+    });
+  }
+  function renderBeadPalettes(){
+    ["mainPalette","patternPalette"].forEach(id=>{
+      const host=$(id); if(!host)return;
+      host.querySelectorAll(".bead-palette-btn").forEach(btn=>{
+        const color=btn.dataset.color.toUpperCase();
+        const preview=btn.querySelector(".palette-bead-preview");
+        if(preview){
+          preview.innerHTML=beadSvgMarkup({size:"m",shape:"round",color,opacity:selectedOpacity==="semi"?"semi":"opaque"});
+        }
+        btn.classList.toggle("palette-selected",selectedOpacity!=="clear" && color===$("color").value.toUpperCase());
+      });
+    });
   }
   function exactTemplateKeys(t){
     const active=activeSuggestionKeys();
@@ -3828,26 +3907,21 @@ select#candidateLimit{
 
   function beadSvgMarkup(b){
     const shape=b.shape||"round";
-    const opacity=b.opacity||"opaque";
-    const color=String(b.color||"#FFFFFF").toUpperCase();
-    const colorless=isColorlessClear(color,opacity);
+    let opacity=b.opacity||"opaque";
+    let color=String(b.color||"#FFFFFF").toUpperCase();
+    if(opacity==="clear")color="#FFFFFF";
+
+    const colorless=opacity==="clear";
     const uid=`beadGrad${++beadSvgUid}`;
     const base=colorless?"#DDEBF0":color;
-    const edge=colorless?"#7E9CAA":darkenHex(color,opacity==="clear"?.14:.20);
+    const edge=colorless?"#7E9CAA":darkenHex(color,opacity==="semi"?.14:.20);
 
-    // 色を残したまま、材質差は内部濃度・輪郭・反射で表現する。
-    const fillOpacity=colorless?.22:opacity==="clear"?.54:opacity==="semi"?.78:.98;
-    const strokeOpacity=opacity==="clear"?.92:opacity==="semi"?.82:.72;
-    const strokeWidth=opacity==="clear"?4.2:opacity==="semi"?3.4:2.4;
-    const lightStop=opacity==="opaque"?.20:opacity==="semi"?.34:.44;
+    const fillOpacity=colorless?.22:opacity==="semi"?.54:.98;
+    const strokeOpacity=colorless?.88:opacity==="semi"?.92:.72;
+    const strokeWidth=colorless?3.8:opacity==="semi"?4.2:2.4;
+    const lightStop=colorless?.48:opacity==="semi"?.44:.20;
 
-    const shapeEl=svgShapeElement(
-      shape,
-      `url(#${uid})`,
-      hexToRgba(edge,strokeOpacity),
-      strokeWidth,
-      fillOpacity
-    );
+    const shapeEl=svgShapeElement(shape,`url(#${uid})`,hexToRgba(edge,strokeOpacity),strokeWidth,fillOpacity);
 
     return `<svg class="bead-svg" viewBox="0 0 100 100" aria-hidden="true">
       <defs>
@@ -3859,7 +3933,7 @@ select#candidateLimit{
         </radialGradient>
       </defs>
       ${shapeEl}
-      ${svgHighlightElement(shape,opacity)}
+      ${svgHighlightElement(shape,opacity==="semi"?"clear":opacity)}
     </svg>`;
   }
 
@@ -4144,11 +4218,11 @@ select#candidateLimit{
   // save
   function projectData(){
     return {
-      app:"beads-design-studio",version:"12.4",
+      app:"beads-design-studio",version:"12.6",
       project:{name:$("projectName").value,type:$("projectType").value,targetLength:targetMm()},
       mm:mmMap(),
       parts:{lengths:partLengthMap(),selectedPart,selectedMetal},
-      beadSelection:{selectedSize,selectedShape,selectedOpacity,color:$("color").value,qty:Number($("qty").value)||1},
+      beadSelection:{selectedSize,selectedShape,selectedOpacity,color:selectedOpacity==="clear"?"#FFFFFF":$("color").value,qty:Number($("qty").value)||1},
       beads:beads.map(b=>({...b})),
       symmetry:{
         left:symmetryLeft.map(b=>({...b})),
@@ -4165,7 +4239,11 @@ select#candidateLimit{
     $("projectName").value=d.project?.name||"";
     $("projectType").value=d.project?.type||"その他";
     $("targetLength").value=d.project?.targetLength||600;
-    if(d.mm){$("mmS").value=d.mm.s;$("mmM").value=d.mm.m;$("mmL").value=d.mm.l}
+    if(d.mm){
+      setMmSelectValue("mmS",d.mm.s,2);
+      setMmSelectValue("mmM",d.mm.m,3);
+      setMmSelectValue("mmL",d.mm.l,6);
+    }
     if(d.parts?.lengths){
       $("partLenBalltip").value=d.parts.lengths.balltip ?? 5;
       $("partLenRing").value=d.parts.lengths.ring ?? 4;
@@ -4176,16 +4254,20 @@ select#candidateLimit{
     if(d.beadSelection){
       selectedSize=d.beadSelection.selectedSize||"s";
       selectedShape=d.beadSelection.selectedShape||"round";
-      selectedOpacity=d.beadSelection.selectedOpacity||"opaque";
-      if(d.beadSelection.color)setColor(d.beadSelection.color);
+      const legacySelection=normalizeBeadMaterial({
+        opacity:d.beadSelection.selectedOpacity||"opaque",
+        color:d.beadSelection.color||"#FFFFFF"
+      });
+      selectedOpacity=legacySelection.opacity;
+      syncColorFields(legacySelection.color);
       if(d.beadSelection.qty)syncQty(d.beadSelection.qty);
       syncSizeButtons();syncShapeButtons();syncOpacityButtons();
     }
     document.querySelectorAll(".part-btn").forEach(b=>b.classList.toggle("active",b.dataset.part===selectedPart));
     document.querySelectorAll(".metal-btn").forEach(b=>b.classList.toggle("active",b.dataset.metal===selectedMetal));
     selectedItemIndex=null;
-    beads.length=0;(d.beads||[]).forEach(b=>beads.push(b));
-    symmetryLeft.length=0;(d.symmetry?.left||[]).forEach(b=>symmetryLeft.push(b));
+    beads.length=0;(d.beads||[]).forEach(b=>beads.push(normalizeBeadMaterial(b)));
+    symmetryLeft.length=0;(d.symmetry?.left||[]).forEach(b=>symmetryLeft.push(normalizeBeadMaterial(b)));
     $("symCenterCount").value=String(d.symmetry?.centerCount??1);
     $("symCenterSize").value=d.symmetry?.centerSize||"l";
     $("symCenterColor").value=d.symmetry?.centerColor||"#C8A96B";
@@ -4198,7 +4280,7 @@ select#candidateLimit{
     loadedPatterns.forEach((p,i)=>patterns.push({
       name:p?.name||`パターン${i+1}`,
       repeat:Math.max(1,Math.min(100,Number(p?.repeat)||4)),
-      beads:(p?.beads||[]).map(b=>({...b}))
+      beads:(p?.beads||[]).map(b=>normalizeBeadMaterial(b))
     }));
     const v=d.view||{};
     viewMode=v.mode==="u"?"u":"line";uAnchor=v.uAnchor==="start"?"start":"center";uScale=["small","mid","big"].includes(v.uScale)?v.uScale:"small";
@@ -4240,12 +4322,13 @@ select#candidateLimit{
   }
   function drawBeadShape(ctx,x,y,r,item){
     const shape=item.shape||"round";
-    const color=String(item.color||"#FFFFFF").toUpperCase();
-    const opacity=item.opacity||"opaque";
-    const colorless=isColorlessClear(color,opacity);
+    const normalized=normalizeBeadMaterial(item);
+    const opacity=normalized.opacity||"opaque";
+    const color=opacity==="clear"?"#FFFFFF":String(normalized.color||"#FFFFFF").toUpperCase();
+    const colorless=opacity==="clear";
     const base=colorless?"#DDEBF0":color;
-    const edge=colorless?"#7E9CAA":darkenHex(color,opacity==="clear"?.14:.20);
-    const alpha=colorless?.22:opacity==="clear"?.54:opacity==="semi"?.78:.98;
+    const edge=colorless?"#7E9CAA":darkenHex(color,opacity==="semi"?.14:.20);
+    const alpha=colorless?.22:opacity==="semi"?.54:.98;
 
     function traceShape(){
       ctx.beginPath();
@@ -4298,13 +4381,13 @@ select#candidateLimit{
 
     ctx.save();
     traceShape();
-    ctx.strokeStyle=hexToRgba(edge,opacity==="clear"?.92:opacity==="semi"?.82:.72);
-    ctx.lineWidth=opacity==="clear"?Math.max(1.4,r*.13):opacity==="semi"?Math.max(1.2,r*.11):Math.max(1,r*.08);
+    ctx.strokeStyle=hexToRgba(edge,opacity==="clear"?.88:opacity==="semi"?.92:.72);
+    ctx.lineWidth=opacity==="clear"?Math.max(1.3,r*.12):opacity==="semi"?Math.max(1.4,r*.13):Math.max(1,r*.08);
     ctx.stroke();
 
     // Common glass reflection, clipped conceptually to upper-left of each silhouette.
     if(opacity!=="opaque"){
-      ctx.strokeStyle=opacity==="clear"?"rgba(255,255,255,.92)":"rgba(255,255,255,.72)";
+      ctx.strokeStyle=opacity==="clear"?"rgba(255,255,255,.84)":"rgba(255,255,255,.92)";
       ctx.lineWidth=Math.max(1.3,r*.13);
       ctx.lineCap="round";
       ctx.beginPath();
@@ -4453,6 +4536,8 @@ select#candidateLimit{
   applyTheme(saved);
   select.addEventListener("change",()=>applyTheme(select.value));
 })();
+
+  syncOpacityButtons();
 </script>
 
 </body>
